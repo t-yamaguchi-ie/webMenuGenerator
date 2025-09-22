@@ -1,0 +1,1 @@
+class SubcodeInfo: pass

@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "webmenu-generator"
+version = "0.1.0"
+description = "Legacy menu data → web content converter (PoC)"
+authors = [{name="Your Team", email="dev@example.com"}]
+requires-python = ">=3.10"
+dependencies = [
+    "pandas>=2.0.0",
+    "openpyxl>=3.1.0"
+]
+
+[project.scripts]
+webmenu = "webmenu.cli:main"

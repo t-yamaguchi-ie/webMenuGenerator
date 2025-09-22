@@ -1,0 +1,1 @@
+class SMenu: pass

@@ -1,0 +1,13 @@
+webmenu generate \
+  --free     dataSrc/free \
+  --osusume  dataSrc/osusume \
+  --out      outroot \
+  --ref      20250917-dev
+
+# 件数チェック
+jq '.products | length' outroot/builds/20250917-dev/web_content/menudb.json
+
+# ブラウザ
+cd outroot/builds/20250917-dev/web_content
+python -m http.server 8080
+# → http://localhost:8080/index.html

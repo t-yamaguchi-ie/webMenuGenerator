@@ -1,0 +1,32 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+.env/
+
+# Build / dist artifacts
+build/
+dist/
+*.egg-info/
+
+# IDE / editor settings
+.vscode/
+.idea/
+*.iml
+
+# macOS metadata
+.DS_Store
+
+# Test caches
+.pytest_cache/
+.mypy_cache/
+
+# Project outputs
+outroot/
+datSrc/
+
+# Local data dumps
+*.log

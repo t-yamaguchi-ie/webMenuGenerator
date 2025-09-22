@@ -1,0 +1,1 @@
+class MenuHead: pass
