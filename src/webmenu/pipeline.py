@@ -14,6 +14,42 @@ from .web.html_skeleton import write_index_html
 from .web.validate import validate_all
 from .dumpers.assets_exporter import export_assets
 
+ASSET_PREFIX_FREE = "free_images/"
+
+
+def _normalize_asset_path(name: str) -> str:
+    if not name:
+        return ""
+    name = str(name).strip()
+    if not name:
+        return ""
+    return name
+
+
+def collect_required_assets(small_pages: dict) -> set[str]:
+    assets: set[str] = set()
+    for payload in small_pages.values():
+        if not isinstance(payload, dict):
+            continue
+        bg = _normalize_asset_path(payload.get("background", ""))
+        if bg:
+            assets.add(bg)
+        for item in payload.get("grid_items", []):
+            if not isinstance(item, dict):
+                continue
+            img = _normalize_asset_path(item.get("image", ""))
+            if img:
+                assets.add(img)
+            detail = item.get("product_detail") or {}
+            info_img = _normalize_asset_path(detail.get("infoImg", ""))
+            if info_img:
+                if "/" in info_img:
+                    assets.add(info_img)
+                else:
+                    assets.add(f"{ASSET_PREFIX_FREE}{info_img}")
+    return assets
+
+
 def run_pipeline(args):
     # ★ここから下、関数内に「import json, os」は置かない！
     ref = args.ref or datetime.datetime.now().strftime("%Y%m%d-%H%M%S-000000")
@@ -35,8 +71,13 @@ def run_pipeline(args):
 
     # Mapping to web_content
     products = make_products(menudb, ini_bundle, schema_version=args.schema_version)
-    categories = make_categories(menudb, ini_bundle, schema_version=args.schema_version)
-    small_pages = make_small_pages(menudb, osusume, ini_bundle, schema_version=args.schema_version)
+    small_pages, cell_files = make_small_pages(
+        menudb,
+        osusume,
+        ini_bundle,
+        schema_version=args.schema_version
+    )
+    categories = make_categories(menudb, ini_bundle, small_pages, schema_version=args.schema_version)
 
     # Emit web_content
     with open(os.path.join(web_dir, "menudb.json"), "w", encoding="utf-8") as f:
@@ -48,9 +89,21 @@ def run_pipeline(args):
         os.makedirs(os.path.dirname(p), exist_ok=True)
         with open(p, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
+    for rel_path, cells_payload in cell_files.items():
+        p = os.path.join(web_dir, rel_path)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p, "w", encoding="utf-8") as f:
+            json.dump(cells_payload, f, ensure_ascii=False, indent=2)
+
+    required_assets = collect_required_assets(small_pages)
 
     if not args.skip_assets:
-        export_assets(args.free, args.osusume, os.path.join(web_dir, "assets"))
+        export_assets(
+            args.free,
+            args.osusume,
+            os.path.join(web_dir, "assets"),
+            required_assets=required_assets
+        )
 
     write_index_html(web_dir)
     validate_all(web_dir)
