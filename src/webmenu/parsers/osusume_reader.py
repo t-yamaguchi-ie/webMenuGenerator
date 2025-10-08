@@ -72,7 +72,6 @@ def _read_itemcells(path: str) -> dict:
 def read_osusume(root: str) -> dict:
     base = os.path.join(root, "smenu")
     entries = []
-    by_key = {}
 
     if not os.path.isdir(base):
         return {"root": root, "entries": entries, "by_key": by_key}
@@ -122,6 +121,5 @@ def read_osusume(root: str) -> dict:
                     "dir": entry_dir,
                 }
                 entries.append(entry)
-                by_key[(l_idx, m_idx, v_idx)] = entry
 
-    return {"root": root, "entries": entries, "by_key": by_key}
+    return {"root": root, "entries": entries}

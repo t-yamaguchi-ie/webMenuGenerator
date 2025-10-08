@@ -106,6 +106,13 @@ _HTML = """<!DOCTYPE html>
     line-height: 1.4;
     background: rgba(255,255,255,0.65);
   }
+  .tile--recommended .meta {
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+  }
+  .tile--recommended .price {
+    color: #ffd54f;
+  }
   .tile .price {
     display: block;
     margin-top: 4px;
@@ -231,6 +238,9 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType) {
     const product = productMap.get(gi.product_code) || {};
     const tile = document.createElement('div');
     tile.className = 'tile';
+    if (layoutType === 'recommended' || gi.osusume) {
+      tile.classList.add('tile--recommended');
+    }
 
     const spanX = Math.max(1, gi.span?.[0] ?? 1);
     const spanY = Math.max(1, gi.span?.[1] ?? 1);
@@ -251,6 +261,7 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType) {
     inner.className = 'tile-inner';
     tile.appendChild(inner);
 
+    const osusumeMeta = gi.osusume || {};
     const imageSrc = gi.image || product.image || '';
     if (imageSrc) {
       const img = document.createElement('img');
@@ -279,11 +290,21 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType) {
       inner.appendChild(layer);
     }
 
-    const price = product.price != null ? `¥${product.price}` : '-';
+    const name = (layoutType === 'recommended' && osusumeMeta.text1) ? osusumeMeta.text1 : (product.name || gi.product_detail?.name || gi.product_code);
+    const price = (() => {
+      if (layoutType === 'recommended' && osusumeMeta.tanka) {
+        return `¥${osusumeMeta.tanka}`;
+      }
+      if (product.price != null) {
+        return `¥${product.price}`;
+      }
+      const fallback = gi.product_detail?.price;
+      return fallback != null ? `¥${fallback}` : '-';
+    })();
     const meta = document.createElement('div');
     meta.className = 'meta';
     meta.innerHTML = `
-      <div>${product.name || gi.product_detail?.name || gi.product_code}</div>
+      <div>${name}</div>
       <span class="price">${price}</span>`;
     inner.appendChild(meta);
 

@@ -18,7 +18,7 @@ def export_assets(free_dir:str, osusume_dir:str, out_assets_dir:str, required_as
                 src_path = os.path.join(free_dir, "images", rel_sub)
             elif rel.startswith(OSUSUME_PREFIX):
                 rel_sub = rel[len(OSUSUME_PREFIX):]
-                src_path = os.path.join(osusume_dir, rel_sub)
+                src_path = os.path.join(osusume_dir, "smenu", rel_sub)
             else:
                 # fallback: treat as free/images root
                 src_path = os.path.join(free_dir, "images", rel)

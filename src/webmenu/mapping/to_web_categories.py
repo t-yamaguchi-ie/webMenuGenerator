@@ -62,7 +62,9 @@ def make_categories(menudb, ini_bundle, small_pages, schema_version="0.1"):
                 if sm_idx >= len(smenus):
                     break
                 sm = smenus[sm_idx]
-                if not sm or sm.get("itemNum", 0) == 0:
+                if not sm:
+                    continue
+                if sm.get("showType", 0) != 6 and sm.get("itemNum", 0) == 0:
                     continue
                 sid = small_id(l_index, m_index, sm.get("index", 0))
                 info = small_page_map.get(sid)
