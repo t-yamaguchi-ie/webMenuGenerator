@@ -1,11 +1,17 @@
 import os
 import csv
+import re
+
+IMAGE_EXTS = (".jpg", ".jpeg", ".png")
+FRAME_INDEX_RE = re.compile(r"(\d{2})$")
+FIXED_LAYOUT_IDS = {1, 2, 3, 4, 6, 8, 9, 10, 12, 24}
 
 
-def _read_frameinf(path: str) -> dict:
-    frames = {}
+def _read_frameinf(path: str):
+    frames_by_section = {}
+    layout_meta: dict[str, str] = {}
     if not os.path.isfile(path):
-        return frames
+        return {}, layout_meta, []
 
     current = None
     with open(path, "r", encoding="shift_jis", errors="ignore") as f:
@@ -15,29 +21,87 @@ def _read_frameinf(path: str) -> dict:
                 continue
             if line.startswith("[") and line.endswith("]"):
                 current = line[1:-1].strip()
+                frames_by_section.setdefault(current, {})
                 continue
-            if current and current.lower().startswith("frame") and "=" in line:
+            if current and "=" in line:
                 key, value = line.split("=", 1)
-                frames.setdefault(current, {})[key.strip()] = value.strip()
+                frames_by_section.setdefault(current, {})[key.strip()] = value.strip()
 
-    result = {}
-    for data in frames.values():
-        code = data.get("itemcode")
-        if not code:
+    frames_by_code = {}
+    slots = []
+    for section, data in frames_by_section.items():
+        lower = section.lower()
+        if lower == "layout":
+            for key, value in data.items():
+                layout_meta[key.lower()] = value
+            continue
+        if not lower.startswith("frame"):
+            continue
+        digits = "".join(ch for ch in section if ch.isdigit())
+        try:
+            frame_index = int(digits) if digits else 0
+        except ValueError:
+            frame_index = 0
+
+        code_raw = data.get("itemcode", "").strip()
+        if not code_raw:
             continue
         try:
-            code_str = str(int(code))
+            code = str(int(code_raw))
         except ValueError:
-            code_str = code.strip()
-        if not code_str:
+            code = code_raw
+        if not code:
             continue
-        result[code_str] = {
-            "itemcode": code_str,
+
+        entry = {
+            "itemcode": code,
             "tanka": data.get("tanka"),
-            "text1": data.get("text1str"),
+            "text1": data.get("text1str") or data.get("text1"),
             "show": data.get("show"),
+            "frame_index": frame_index,
         }
-    return result
+        frames_by_code[code] = entry
+        slots.append(entry)
+
+    slots.sort(key=lambda e: e.get("frame_index") or 0)
+    return frames_by_code, layout_meta, slots
+
+
+def _scan_images(entry_dir: str, l_name: str, m_name: str, v_name: str):
+    frame_images: dict[int, str] = {}
+    other_images: list[str] = []
+
+    try:
+        names = sorted(os.listdir(entry_dir))
+    except FileNotFoundError:
+        return frame_images, other_images
+
+    for fname in names:
+        lower = fname.lower()
+        if lower in {".ds_store", "thumbs.db"}:
+            continue
+        if not lower.endswith(IMAGE_EXTS):
+            continue
+        path = os.path.join(entry_dir, fname)
+        if not os.path.isfile(path):
+            continue
+
+        rel = f"osusume_images/{l_name}/{m_name}/{v_name}/{fname}"
+        stem = os.path.splitext(fname)[0]
+        match = FRAME_INDEX_RE.search(stem)
+        frame_idx = None
+        if match:
+            try:
+                frame_idx = int(match.group(1))
+            except ValueError:
+                frame_idx = None
+
+        if frame_idx:
+            frame_images.setdefault(frame_idx, rel)
+        else:
+            other_images.append(rel)
+
+    return frame_images, other_images
 
 
 def _read_itemcells(path: str) -> dict:
@@ -102,14 +166,29 @@ def read_osusume(root: str) -> dict:
 
                 frame_path = os.path.join(entry_dir, "frameinf.ini")
                 cells_path = os.path.join(entry_dir, "itemcell.csv")
-                frames = _read_frameinf(frame_path)
+                frames, layout_meta, slots = _read_frameinf(frame_path)
                 cells = _read_itemcells(cells_path)
+                frame_images, other_images = _scan_images(entry_dir, l_name, m_name, v_name)
 
-                images = [fname for fname in os.listdir(entry_dir)
-                          if fname.lower().endswith((".jpg", ".jpeg", ".png"))]
-                background = images[0] if images else ""
-                if background:
-                    background = f"osusume_images/{l_name}/{m_name}/{v_name}/{background}"
+                layout_id = layout_meta.get("layout") if layout_meta else None
+                try:
+                    layout_id = int(layout_id)
+                except (TypeError, ValueError):
+                    layout_id = None
+                layout_show = layout_meta.get("show")
+
+                entry_frame_images = frame_images if layout_id in FIXED_LAYOUT_IDS else {}
+                background = ""
+                if layout_id in FIXED_LAYOUT_IDS:
+                    if other_images:
+                        background = other_images[0]
+                else:
+                    if other_images:
+                        background = other_images[0]
+                    elif frame_images:
+                        first_key = sorted(frame_images.keys())[0]
+                        background = frame_images[first_key]
+                    entry_frame_images = {}
 
                 entry = {
                     "l_index": l_idx,
@@ -118,6 +197,10 @@ def read_osusume(root: str) -> dict:
                     "background": background,
                     "cells": cells,
                     "frames": frames,
+                    "frame_slots": slots,
+                    "layout": layout_id,
+                    "layout_show": layout_show,
+                    "frame_images": entry_frame_images,
                     "dir": entry_dir,
                 }
                 entries.append(entry)

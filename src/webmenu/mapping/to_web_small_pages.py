@@ -1,6 +1,129 @@
 from ..core.ids import page_relpath, small_id
 from ..parsers import menudb_reader as mreader
 
+ABS_COLS = 40
+ABS_ROWS = 20
+
+_FIXED_LAYOUT_PRESETS: dict[int, tuple[int, int]] = {
+    1: (1, 1),
+    2: (2, 1),
+    3: (3, 1),
+    4: (2, 2),
+    6: (3, 2),
+    8: (4, 2),
+    9: (3, 3),
+    10: (5, 2),
+    12: (4, 3),
+    24: (6, 4),
+}
+
+
+def _split_dimension(total: int, parts: int) -> list[int]:
+    if parts <= 0:
+        return []
+    base = total // parts
+    remainder = total - base * parts
+    spans = [base] * parts
+    idx = 0
+    while remainder > 0 and idx < len(spans):
+        spans[idx] += 1
+        remainder -= 1
+        idx += 1
+    return spans
+
+
+def _expand_cells(cell: list[int], span: list[int]) -> list[tuple[int, int]]:
+    x0, y0 = cell
+    width, height = span
+    coords = []
+    for dy in range(height):
+        for dx in range(width):
+            coords.append((x0 + dx, y0 + dy))
+    return coords
+
+
+def _is_visible_flag(value) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return True
+        try:
+            return int(stripped) != 0
+        except ValueError:
+            return stripped.lower() in {"true", "on", "yes"}
+    return True
+
+
+def _build_fixed_layout(entry: dict, info_by_code: dict[str, dict]) -> tuple[list[dict], dict]:
+    layout_id = entry.get("layout")
+    if layout_id not in _FIXED_LAYOUT_PRESETS:
+        return [], {}
+
+    cols, rows = _FIXED_LAYOUT_PRESETS[layout_id]
+    total_positions = cols * rows
+    col_spans = _split_dimension(ABS_COLS, cols)
+    row_spans = _split_dimension(ABS_ROWS, rows)
+
+    plan = []
+    y = 1
+    for r in range(rows):
+        x = 1
+        span_y = row_spans[r]
+        for c in range(cols):
+            span_x = col_spans[c]
+            plan.append({
+                "cell": [x, y],
+                "span": [span_x, span_y],
+            })
+            x += span_x
+        y += span_y
+
+    frames_meta = entry.get("frames") or {}
+    frame_images = entry.get("frame_images") or {}
+    slots = entry.get("frame_slots") or []
+
+    items: list[dict] = []
+    cells_map: dict[str, list[tuple[int, int]]] = {}
+    for idx, slot in enumerate(slots):
+        if idx >= len(plan) or len(items) >= total_positions:
+            break
+        pos = plan[idx]
+        code = str(slot.get("itemcode") or "").strip()
+        if not code:
+            continue
+        if not _is_visible_flag(slot.get("show")):
+            continue
+        frame_idx = slot.get("frame_index")
+        product_info = info_by_code.get(code) or {}
+        product_detail = dict(product_info) if isinstance(product_info, dict) else {"code": code}
+        osusume_meta = frames_meta.get(code, {})
+
+        cell = pos["cell"][:]
+        span = pos["span"][:]
+        coords = _expand_cells(cell, span)
+        image_path = frame_images.get(frame_idx, "") if frame_idx else ""
+
+        item = {
+            "product_code": code,
+            "cell": cell,
+            "span": span,
+            "process": 0,
+            "image": image_path,
+            "product_detail": product_detail,
+            "cells_path": "",
+            "osusume": osusume_meta,
+        }
+        items.append(item)
+        cells_map[code] = coords
+
+    return items, cells_map
+
 
 def _build_iteminfo_map(menudb: dict):
     meta = menudb.get("meta", {})
@@ -72,6 +195,8 @@ def make_small_pages(menudb, osusume, ini_bundle, schema_version="0.1"):
             cells_map = {}
             layout_type = "free"
             background_override = ""
+            layout_mode_value = None
+            layout_flag_value = None
 
             if show_type == 6:
                 entry = osusume_map.get((mm.get("l_index", 0), mm.get("index", 0), seq + 1))
@@ -80,33 +205,93 @@ def make_small_pages(menudb, osusume, ini_bundle, schema_version="0.1"):
                 if not entry:
                     continue
 
-                for code, coords in entry.get("cells", {}).items():
-                    if not coords:
-                        continue
-                    coords = sorted(coords, key=lambda c: (c[1], c[0]))
-                    xs = [c[0] for c in coords]
-                    ys = [c[1] for c in coords]
-                    min_x = min(xs)
-                    min_y = min(ys)
-                    span_x = max(1, max(xs) - min_x + 1)
-                    span_y = max(1, max(ys) - min_y + 1)
-                    product_info = info_by_code.get(code)
-                    product_detail = dict(product_info) if isinstance(product_info, dict) else {"code": code}
-                    osusume_meta = entry.get("frames", {}).get(code, {})
-                    grid_items.append({
-                        "product_code": code,
-                        "cell": [min_x, min_y],
-                        "span": [span_x, span_y],
-                        "process": 0,
-                        "image": "",
-                        "product_detail": product_detail,
-                        "cells_path": "",
-                        "osusume": osusume_meta,
-                    })
-                    cells_map[code] = coords
-
-                background_override = entry.get("background", "")
+                frames_meta = entry.get("frames") or {}
+                frame_slots = entry.get("frame_slots") or []
+                entry_cells = entry.get("cells") or {}
+                frame_images = entry.get("frame_images") or {}
                 layout_type = "recommended"
+                background_override = entry.get("background", "") or ""
+                layout_mode_value = entry.get("layout")
+                layout_flag_value = entry.get("layout_show")
+                is_fixed_layout = layout_mode_value in _FIXED_LAYOUT_PRESETS if layout_mode_value else False
+
+                frame_index_by_code = {}
+                for slot in frame_slots:
+                    code_key = str(slot.get("itemcode") or "").strip()
+                    if not code_key:
+                        continue
+                    frame_index = slot.get("frame_index")
+                    if frame_index:
+                        frame_index_by_code[code_key] = frame_index
+
+                if entry_cells:
+                    added_codes = set()
+
+                    for slot in frame_slots:
+                        code = str(slot.get("itemcode") or "").strip()
+                        if not code or code in added_codes:
+                            continue
+                        coords = entry_cells.get(code) or []
+                        if not coords:
+                            continue
+                        coords = sorted(coords, key=lambda c: (c[1], c[0]))
+                        xs = [c[0] for c in coords]
+                        ys = [c[1] for c in coords]
+                        min_x = min(xs)
+                        min_y = min(ys)
+                        span_x = max(1, max(xs) - min_x + 1)
+                        span_y = max(1, max(ys) - min_y + 1)
+                        frame_idx = slot.get("frame_index")
+                        image_path = frame_images.get(frame_idx, "") if frame_idx else ""
+                        product_info = info_by_code.get(code)
+                        product_detail = dict(product_info) if isinstance(product_info, dict) else {"code": code}
+                        osusume_meta = frames_meta.get(code, {})
+                        grid_items.append({
+                            "product_code": code,
+                            "cell": [min_x, min_y],
+                            "span": [span_x, span_y],
+                            "process": 0,
+                            "image": image_path,
+                            "product_detail": product_detail,
+                            "cells_path": "",
+                            "osusume": osusume_meta,
+                        })
+                        if not is_fixed_layout:
+                            cells_map[code] = coords
+                        added_codes.add(code)
+
+                    for code, coords in entry_cells.items():
+                        if code in added_codes or not coords:
+                            continue
+                        coords = sorted(coords, key=lambda c: (c[1], c[0]))
+                        xs = [c[0] for c in coords]
+                        ys = [c[1] for c in coords]
+                        min_x = min(xs)
+                        min_y = min(ys)
+                        span_x = max(1, max(xs) - min_x + 1)
+                        span_y = max(1, max(ys) - min_y + 1)
+                        frame_idx = frame_index_by_code.get(code)
+                        image_path = frame_images.get(frame_idx, "") if frame_idx else ""
+                        product_info = info_by_code.get(code)
+                        product_detail = dict(product_info) if isinstance(product_info, dict) else {"code": code}
+                        osusume_meta = frames_meta.get(code, {})
+                        grid_items.append({
+                            "product_code": code,
+                            "cell": [min_x, min_y],
+                            "span": [span_x, span_y],
+                            "process": 0,
+                            "image": image_path,
+                            "product_detail": product_detail,
+                            "cells_path": "",
+                            "osusume": osusume_meta,
+                        })
+                        if not is_fixed_layout:
+                            cells_map[code] = coords
+                else:
+                    fixed_items, fixed_cells = _build_fixed_layout(entry, info_by_code)
+                    grid_items.extend(fixed_items)
+                    if layout_mode_value not in _FIXED_LAYOUT_PRESETS:
+                        cells_map.update(fixed_cells)
             else:
                 item_addr = sm.get("itemAddr", 0)
                 item_count = sm.get("itemNum", 0)
@@ -201,6 +386,8 @@ def make_small_pages(menudb, osusume, ini_bundle, schema_version="0.1"):
                     "total_in_group": sm_count,
                     "show_type": show_type,
                     "layout_type": layout_type,
+                    "layout_mode": layout_mode_value,
+                    "layout_show": layout_flag_value,
                     "cm_flag": sm.get("cmFlg", 0),
                     "item_num": sm.get("itemNum", 0),
                     "back_color": sm.get("backColor", 0),

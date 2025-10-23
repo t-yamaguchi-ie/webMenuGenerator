@@ -83,7 +83,6 @@ _HTML = """<!DOCTYPE html>
     height: 100%;
     object-fit: cover;
     background: #ececec;
-    opacity: 0.4;
   }
   .cell-layer {
     position: absolute;
@@ -262,8 +261,11 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType) {
     tile.appendChild(inner);
 
     const osusumeMeta = gi.osusume || {};
-    const imageSrc = gi.image || product.image || '';
+    let imageSrc = gi.image || product.image || '';
     if (imageSrc) {
+      if (!imageSrc.startsWith('./') && !imageSrc.startsWith('/') && !imageSrc.startsWith('http') && !imageSrc.startsWith('data:')) {
+        imageSrc = `./assets/${imageSrc}`;
+      }
       const img = document.createElement('img');
       img.src = imageSrc;
       img.alt = '';
