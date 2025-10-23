@@ -383,6 +383,25 @@ function handleSelectionChange(cats, initialLoad=false) {
   }
 }
 
+function changeLMenu(lValue) {
+    var select = document.getElementById('lSelect');
+    select.value = `L${String(lValue).padStart(2, '0')}`; 
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+}
+
+function changeMMenu(lValue, mValue) {
+    // 大分類の切り替え
+    changeLMenu(lValue);
+ 
+    // 中分類の切り替え
+    var select = document.getElementById('mSelect');
+    select.value = `M${String(lValue).padStart(2, '0')}${String(mValue).padStart(2, '0')}`; 
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+ 
+    return true;
+}
+
 (async () => {
   try {
     const cats = await ensureCategories();
