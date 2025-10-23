@@ -34,6 +34,14 @@ pip install -e .
 
 ※ `pyproject.toml` には `pandas` / `openpyxl` など必要ライブラリを定義済み。
 
+- Windows PowerShell
+
+```bash
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -e .
+```
+
 ## 実行方法
 ```bash
 # プロジェクトルートで実行
@@ -48,6 +56,20 @@ PYTHONPATH=src python -m webmenu.cli generate \
 # 参照画像も含める場合は --skip-assets を外す（デフォルト）。
 # `outroot/builds/<ref>/web_content` で `python -m http.server` を起動し、
 # http://localhost:8000/ を開くと `result.html` と同じ UI で確認できます。
+```
+
+- Windows PowerShell
+
+```bash
+$env:PYTHONPATH = "src"
+python -m webmenu.cli generate `
+  --free dataSrc/free `
+  --osusume dataSrc/osusume `
+  --out outroot `
+  --ref 20250917-dev
+
+cd outroot/builds/<ref>/web_content
+python -m http.server
 ```
 
 ## 動作確認のポイント
