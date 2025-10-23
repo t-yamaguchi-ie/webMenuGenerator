@@ -267,7 +267,12 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType) {
       const img = document.createElement('img');
       img.src = imageSrc;
       img.alt = '';
-      inner.appendChild(img);
+      
+      // クリックイベントを追加
+      const link = document.createElement('a');
+      link.href = `a-menu://webAddOrder?data=${encodeURIComponent(JSON.stringify(gi))}`;
+      link.appendChild(img);
+      inner.appendChild(link);
     }
 
     const cellsPath = gi.cells_path;
