@@ -269,7 +269,12 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType) {
       const img = document.createElement('img');
       img.src = imageSrc;
       img.alt = '';
-      inner.appendChild(img);
+      
+      // クリックイベントを追加
+      const link = document.createElement('a');
+      link.href = `a-menu://webAddOrder?data=${encodeURIComponent(JSON.stringify(gi))}`;
+      link.appendChild(img);
+      inner.appendChild(link);
     }
 
     const cellsPath = gi.cells_path;
@@ -383,6 +388,25 @@ function handleSelectionChange(cats, initialLoad=false) {
   if (!initialLoad) {
     run();
   }
+}
+
+function changeLMenu(lValue) {
+    var select = document.getElementById('lSelect');
+    select.value = `L${String(lValue).padStart(2, '0')}`; 
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+}
+
+function changeMMenu(lValue, mValue) {
+    // 大分類の切り替え
+    changeLMenu(lValue);
+ 
+    // 中分類の切り替え
+    var select = document.getElementById('mSelect');
+    select.value = `M${String(lValue).padStart(2, '0')}${String(mValue).padStart(2, '0')}`; 
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+ 
+    return true;
 }
 
 (async () => {
