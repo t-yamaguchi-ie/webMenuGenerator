@@ -7,7 +7,7 @@
 - `webmenu generate` CLI が `free/config/*.ini`・`menudb.dat`・`osusume` を取り込み、`outroot/builds/<ref>/` 配下に `raw_dump` と `web_content` を出力。
 - 小分類ページ生成（`to_web_small_pages.py`）は showType=0（フリーレイアウト）と showType=6（おすすめグリッド）の両方に対応。セル座標は `small/<id>/cells.json` へ切り出し、`grid_items` に `product_detail` とおすすめ特有の `osusume` メタを保持。
 - カテゴリツリー（`to_web_categories.py`）が L/M/S をツリー化し、ページの `layout_type` / `sequence` / `show_type` を付与。
-- SPA（`src/webmenu/web/html_skeleton.py`）はブラウザ上で階層をプルダウン選択し、セルオーバーレイ付きでレイアウト確認が可能。おすすめページは背景＋セル枠でのプレビューデバッグができる。
+- SPA（`src/webmenu/web/html_skeleton.py`）はブラウザ上で階層をプルダウン選択し、セルオーバーレイ付きでレイアウト確認が可能。おすすめページは背景＋セル枠でのプレビューデバッグができる。デフォルト出力は商品画像のみを表示し、`--show-dev-ui` を付けてビルドするとツールバーやログを含むデバッグ UI が有効になる。
 
 ## TODO / 未完了タスク
 - おすすめページの売切れ時挙動（非表示・左詰め）や放題モードなど、表示制御の実装。
@@ -50,6 +50,7 @@ PYTHONPATH=src python -m webmenu.cli generate \
   --osusume  dataSrc/osusume \
   --out      outroot \
   --ref      20250917-dev
+  # ツールバー/ログを表示したい場合は --show-dev-ui を追加
 
 # 実行後: outroot/builds/20250917-dev/ 以下に raw_dump / web_content が生成されます
 
@@ -67,6 +68,7 @@ python -m webmenu.cli generate `
   --osusume dataSrc/osusume `
   --out outroot `
   --ref 20250917-dev
+  # --show-dev-ui を付けるとデバッグ UI 付きで出力されます
 
 cd outroot/builds/<ref>/web_content
 python -m http.server

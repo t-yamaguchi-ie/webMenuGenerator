@@ -105,6 +105,6 @@ def run_pipeline(args):
             required_assets=required_assets
         )
 
-    write_index_html(web_dir)
+    write_index_html(web_dir, show_dev_ui=args.show_dev_ui)
     validate_all(web_dir)
     print(f"Done → {out_root}")

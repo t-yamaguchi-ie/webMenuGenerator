@@ -2,7 +2,15 @@ webmenu generate \
   --free     dataSrc/free \
   --osusume  dataSrc/osusume \
   --out      outroot \
-  --ref      20250917-dev
+  --ref      251028-dev
+
+webmenu generate \
+  --free     dataSrc/free \
+  --osusume  dataSrc/osusume \
+  --out      outroot \
+  --show-dev-ui
+  --ref      251028-dev
+
 
 # 件数チェック
 jq '.products | length' outroot/builds/20250917-dev/web_content/menudb.json

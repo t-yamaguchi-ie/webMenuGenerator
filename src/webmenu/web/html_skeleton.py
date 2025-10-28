@@ -1,124 +1,192 @@
 from pathlib import Path
+from textwrap import dedent
 
-_HTML = """<!DOCTYPE html>
+_HTML_BEFORE_STYLE = """<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Menu SPA (PoC)</title>
 <style>
-  :root { color-scheme: light dark; }
-  body {
-    margin: 0;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-    background: #f6f6f6;
-  }
-  .toolbar {
-    max-width: 1000px;
-    margin: 24px auto 0;
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    padding: 0 16px;
-    flex-wrap: wrap;
-  }
-  .toolbar-group {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .toolbar label {
-    font-size: 13px;
-    color: #444;
-  }
-  .toolbar select,
-  .toolbar button {
-    padding: 6px 10px;
-    font-size: 13px;
-  }
-  .stage {
-    width: 1000px;
-    margin: 16px auto 48px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  #log {
-    font-size: 14px;
-    color: #333;
-    padding: 0 4px;
-  }
-  .canvas {
-    position: relative;
-    width: 1000px;
-    height: 533px;
-    border: 1px solid #d0d0d0;
-    border-radius: 12px;
-    overflow: hidden;
-    background: #f2f2f2 center/cover no-repeat;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-  }
-  .grid {
-    position: relative;
-    width: 100%;
-    height: 100%;
-  }
-  .tile {
-    position: absolute;
-    box-sizing: border-box;
-    border-radius: 10px;
-    background: transparent;
-    border: none;
-    overflow: hidden;
-  }
-  .tile-inner {
-    position: relative;
-    width: 100%;
-    height: 100%;
-  }
-  .tile-inner img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    background: #ececec;
-  }
-  .cell-layer {
-    position: absolute;
-    inset: 0;
-  }
-  .cell-box {
-    position: absolute;
-    border: 1px solid rgba(0, 120, 255, 0.5);
-    background: rgba(0, 120, 255, 0.15);
-    border-radius: 2px;
-    box-sizing: border-box;
-  }
-  .tile .meta {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: 6px 10px 8px;
-    font-size: 13px;
-    line-height: 1.4;
-    background: rgba(255,255,255,0.65);
-  }
-  .tile--recommended .meta {
-    background: rgba(0,0,0,0.55);
-    color: #fff;
-  }
-  .tile--recommended .price {
-    color: #ffd54f;
-  }
-  .tile .price {
-    display: block;
-    margin-top: 4px;
-    color: #6c9a00;
-    font-weight: 600;
-  }
-</style>
+"""
+
+_CSS_COMMON_TOP = dedent(
+    """
+    :root { color-scheme: light dark; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f6f6f6;
+    }
+    """
+).strip()
+
+_CSS_TOOLBAR_VISIBLE = dedent(
+    """
+    .toolbar {
+      max-width: 1000px;
+      margin: 24px auto 0;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 0 16px;
+      flex-wrap: wrap;
+    }
+    """
+).strip()
+
+_CSS_TOOLBAR_HIDDEN = dedent(
+    """
+    .toolbar {
+      display: none;
+    }
+    """
+).strip()
+
+_CSS_TOOLBAR_COMMON = dedent(
+    """
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .toolbar label {
+      font-size: 13px;
+      color: #444;
+    }
+    .toolbar select,
+    .toolbar button {
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+    """
+).strip()
+
+_CSS_STAGE = dedent(
+    """
+    .stage {
+      width: 1000px;
+      margin: 16px auto 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    """
+).strip()
+
+_CSS_LOG_VISIBLE = dedent(
+    """
+    #log {
+      font-size: 14px;
+      color: #333;
+      padding: 0 4px;
+    }
+    """
+).strip()
+
+_CSS_LOG_HIDDEN = dedent(
+    """
+    #log {
+      display: none;
+    }
+    """
+).strip()
+
+_CSS_CANVAS = dedent(
+    """
+    .canvas {
+      position: relative;
+      width: 1000px;
+      height: 533px;
+      border: 1px solid #d0d0d0;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #f2f2f2 center/cover no-repeat;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    """
+).strip()
+
+_CSS_GRID = dedent(
+    """
+    .grid {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    """
+).strip()
+
+_CSS_TILE = dedent(
+    """
+    .tile {
+      position: absolute;
+      box-sizing: border-box;
+      border-radius: 10px;
+      background: transparent;
+      border: none;
+      overflow: hidden;
+    }
+    """
+).strip()
+
+_CSS_TILE_INNER = dedent(
+    """
+    .tile-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    """
+).strip()
+
+_CSS_TILE_IMAGE = dedent(
+    """
+    .tile-inner img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #ececec;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .tile-inner img.is-loaded {
+      opacity: 1;
+    }
+    """
+).strip()
+
+_CSS_CELL_LAYER = dedent(
+    """
+    .cell-layer {
+      display: none;
+    }
+    """
+).strip()
+
+_CSS_CELL_BOX = dedent(
+    """
+    .cell-box {
+      position: absolute;
+      border: 1px solid rgba(0, 120, 255, 0.5);
+      background: rgba(0, 120, 255, 0.15);
+      border-radius: 2px;
+      box-sizing: border-box;
+    }
+    """
+).strip()
+
+_CSS_TILE_META = dedent(
+    """
+    .tile .meta {
+      display: none;
+    }
+    """
+).strip()
+
+_HTML_AFTER_STYLE = """</style>
 </head>
 <body>
 <div class="toolbar">
@@ -232,7 +300,7 @@ function layoutCanvas(items) {
 }
 
 function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType) {
-  gridEl.innerHTML = '';
+  const tiles = [];
   for (const gi of items) {
     const product = productMap.get(gi.product_code) || {};
     const tile = document.createElement('div');
@@ -269,6 +337,15 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType) {
       const img = document.createElement('img');
       img.src = imageSrc;
       img.alt = '';
+      const markLoaded = () => {
+        requestAnimationFrame(() => img.classList.add('is-loaded'));
+      };
+      if (img.complete) {
+        markLoaded();
+      } else {
+        img.addEventListener('load', markLoaded, { once: true });
+        img.addEventListener('error', markLoaded, { once: true });
+      }
       
       // クリックイベントを追加
       const link = document.createElement('a');
@@ -315,8 +392,10 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType) {
       <span class="price">${price}</span>`;
     inner.appendChild(meta);
 
-    gridEl.appendChild(tile);
+    tiles.push(tile);
   }
+
+  gridEl.replaceChildren(...tiles);
 }
 
 async function run() {
@@ -443,9 +522,35 @@ function changeMMenu(lValue, mValue) {
 })();
 </script>
 </body>
-</html>"""
+</html>
+"""
 
-def write_index_html(web_dir: str) -> None:
+
+def _build_css(show_dev_ui: bool) -> str:
+    parts = [
+        _CSS_COMMON_TOP,
+        _CSS_TOOLBAR_VISIBLE if show_dev_ui else _CSS_TOOLBAR_HIDDEN,
+        _CSS_TOOLBAR_COMMON,
+        _CSS_STAGE,
+        _CSS_LOG_VISIBLE if show_dev_ui else _CSS_LOG_HIDDEN,
+        _CSS_CANVAS,
+        _CSS_GRID,
+        _CSS_TILE,
+        _CSS_TILE_INNER,
+        _CSS_TILE_IMAGE,
+        _CSS_CELL_LAYER,
+        _CSS_CELL_BOX,
+        _CSS_TILE_META,
+    ]
+    return "\n\n".join(parts) + "\n"
+
+
+def build_index_html(show_dev_ui: bool = False) -> str:
+    css = _build_css(show_dev_ui)
+    return "".join([_HTML_BEFORE_STYLE, css, _HTML_AFTER_STYLE])
+
+
+def write_index_html(web_dir: str, show_dev_ui: bool = False) -> None:
     p = Path(web_dir) / "index.html"
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(_HTML, encoding="utf-8")
+    p.write_text(build_index_html(show_dev_ui), encoding="utf-8")

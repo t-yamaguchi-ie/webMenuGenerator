@@ -12,6 +12,7 @@ def build_parser():
     g.add_argument("--ref", default="", help="Optional ref (YYYYMMDD-hhmmss-commit). Auto if empty.")
     g.add_argument("--schema-version", default="0.1", help="web_content schema version")
     g.add_argument("--skip-assets", action="store_true", help="Skip asset copy/optimization")
+    g.add_argument("--show-dev-ui", action="store_true", help="Show toolbar/log UI in generated index.html")
     return p
 
 def main():
