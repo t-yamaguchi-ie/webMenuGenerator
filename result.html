@@ -240,6 +240,11 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType) {
       tile.classList.add('tile--recommended');
     }
 
+    
+    // ★タイル自体に JSON データを紐付け
+    tile.dataset.info = JSON.stringify(gi);
+
+
     const spanX = Math.max(1, gi.span?.[0] ?? 1);
     const spanY = Math.max(1, gi.span?.[1] ?? 1);
     const rawX = gi.cell?.[0] ?? 0;

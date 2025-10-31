@@ -206,6 +206,10 @@ _HTML_AFTER_STYLE = """</style>
 </div>
 <div class="stage">
   <div id="log">Ready</div>
+
+  <!-- 多言語 -->
+  <div id="langDisplay">Lang: --</div>
+  
   <div id="canvas" class="canvas">
     <div id="grid" class="grid"></div>
   </div>
@@ -216,6 +220,14 @@ const CANVAS_HEIGHT = 533;
 const ABS_COLS = 40;
 const ABS_ROWS = 20;
 const cache = { products: null, categories: null, cells: new Map() };
+
+<!-- 多言語表示エリア -->
+function onLangData(langNo, langPath) {
+    const display = document.getElementById('langDisplay');
+    if (display) {
+        display.textContent = `Lang No: ${langNo}, Path: ${langPath}`;
+    }
+}
 
 async function fetchJson(path) {
   const res = await fetch(path);
