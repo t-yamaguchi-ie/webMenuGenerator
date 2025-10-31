@@ -68,38 +68,53 @@ def _read_frameinf(path: str):
 
 
 def _scan_images(entry_dir: str, l_name: str, m_name: str, v_name: str):
-    frame_images: dict[int, str] = {}
+    frame_images: dict[str, dict[int, str]] = {}
     other_images: list[str] = []
-
-    try:
-        names = sorted(os.listdir(entry_dir))
-    except FileNotFoundError:
+    
+    # ディレクトリが存在しない場合は空を返す
+    if not os.path.isdir(entry_dir):
         return frame_images, other_images
-
-    for fname in names:
-        lower = fname.lower()
-        if lower in {".ds_store", "thumbs.db"}:
-            continue
-        if not lower.endswith(IMAGE_EXTS):
-            continue
-        path = os.path.join(entry_dir, fname)
-        if not os.path.isfile(path):
-            continue
-
-        rel = f"osusume_images/{l_name}/{m_name}/{v_name}/{fname}"
-        stem = os.path.splitext(fname)[0]
-        match = FRAME_INDEX_RE.search(stem)
-        frame_idx = None
-        if match:
-            try:
-                frame_idx = int(match.group(1))
-            except ValueError:
-                frame_idx = None
-
-        if frame_idx:
-            frame_images.setdefault(frame_idx, rel)
-        else:
-            other_images.append(rel)
+    
+    # entry_dir 以下のすべてのファイルを再帰的に走査
+    # os.walk を使用することで en-US などの言語サブディレクトリも含める
+    
+    for root ,dirs, files in os.walk(entry_dir):
+        
+        # 現在の言語ディレクトリを取得
+        rel_root = os.path.relpath(root, entry_dir).replace(os.sep, "/")
+        lang = "default" if rel_root == "." else rel_root
+        
+        for fname in sorted(files):
+            lower = fname.lower()
+            if lower in {".ds_store", "thumbs.db"}:
+                continue
+            if not lower.endswith(IMAGE_EXTS):
+                continue
+            path = os.path.join(root, fname)
+            if not os.path.isfile(path):
+                continue
+            
+            # 相対パスを取得して出力用パスを構築
+            rel_path = os.path.relpath(path, entry_dir).replace(os.sep, "/")
+            rel = f"osusume_images/{l_name}/{m_name}/{v_name}/{rel_path}"
+            
+            # frame_idx の判定
+            stem = os.path.splitext(fname.strip())[0]
+            match = FRAME_INDEX_RE.search(stem)
+            frame_idx = None
+            if match:
+                try:
+                    frame_idx = int(match.group(1))
+                except ValueError:
+                    frame_idx = None
+                    
+            # 言語ごとに frame_images を格納        
+            if frame_idx is not None:
+                if lang not in frame_images:
+                    frame_images[lang] = {}
+                frame_images[lang][frame_idx] = rel
+            else:
+                other_images.append(rel)
 
     return frame_images, other_images
 
@@ -136,6 +151,7 @@ def _read_itemcells(path: str) -> dict:
 def read_osusume(root: str) -> dict:
     base = os.path.join(root, "smenu")
     entries = []
+    by_key = {}
 
     if not os.path.isdir(base):
         return {"root": root, "entries": entries, "by_key": by_key}
@@ -176,8 +192,20 @@ def read_osusume(root: str) -> dict:
                 except (TypeError, ValueError):
                     layout_id = None
                 layout_show = layout_meta.get("show")
+                
+                # デフォルトのフレーム画像（default 言語）を格納する辞書
+                entry_frame_images = {}
+                
+                # すべての言語のフレーム画像を格納する辞書
+                multi_lang_images = {}
+                
+                if layout_id in FIXED_LAYOUT_IDS :
+                    entry_frame_images = frame_images.get("default", {})
+                    multi_lang_images = frame_images.copy()
+                else:
+                    entry_frame_images = {}
+                    multi_lang_images = {}
 
-                entry_frame_images = frame_images if layout_id in FIXED_LAYOUT_IDS else {}
                 background = ""
                 if layout_id in FIXED_LAYOUT_IDS:
                     if other_images:
@@ -201,6 +229,7 @@ def read_osusume(root: str) -> dict:
                     "layout": layout_id,
                     "layout_show": layout_show,
                     "frame_images": entry_frame_images,
+                    "multi_lang_images": multi_lang_images,
                     "dir": entry_dir,
                 }
                 entries.append(entry)

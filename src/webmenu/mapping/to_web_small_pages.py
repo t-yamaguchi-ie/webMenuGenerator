@@ -86,6 +86,7 @@ def _build_fixed_layout(entry: dict, info_by_code: dict[str, dict]) -> tuple[lis
 
     frames_meta = entry.get("frames") or {}
     frame_images = entry.get("frame_images") or {}
+    multi_lang_images = entry.get("multi_lang_images") or {}
     slots = entry.get("frame_slots") or []
 
     items: list[dict] = []
@@ -108,6 +109,10 @@ def _build_fixed_layout(entry: dict, info_by_code: dict[str, dict]) -> tuple[lis
         span = pos["span"][:]
         coords = _expand_cells(cell, span)
         image_path = frame_images.get(frame_idx, "") if frame_idx else ""
+        multi_lang_image_paths = {
+            lang: imgs.get(frame_idx, "")
+            for lang, imgs in multi_lang_images.items()
+        }
 
         item = {
             "product_code": code,
@@ -115,6 +120,7 @@ def _build_fixed_layout(entry: dict, info_by_code: dict[str, dict]) -> tuple[lis
             "span": span,
             "process": 0,
             "image": image_path,
+            "multi_lang_images": multi_lang_image_paths,
             "product_detail": product_detail,
             "cells_path": "",
             "osusume": osusume_meta,

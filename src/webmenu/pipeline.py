@@ -47,6 +47,13 @@ def collect_required_assets(small_pages: dict) -> set[str]:
                     assets.add(info_img)
                 else:
                     assets.add(f"{ASSET_PREFIX_FREE}{info_img}")
+                    
+            # multi_lang_images
+            multi_lang_images = item.get("multi_lang_images") or {}
+            for lang, path in multi_lang_images.items():
+                path = _normalize_asset_path(path)
+                if path:
+                    assets.add(path)
     return assets
 
 
