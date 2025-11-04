@@ -215,6 +215,7 @@ def make_small_pages(menudb, osusume, ini_bundle, schema_version="0.1"):
                 frame_slots = entry.get("frame_slots") or []
                 entry_cells = entry.get("cells") or {}
                 frame_images = entry.get("frame_images") or {}
+                multi_lang_images = entry.get("multi_lang_images") or {}
                 layout_type = "recommended"
                 background_override = entry.get("background", "") or ""
                 layout_mode_value = entry.get("layout")
@@ -249,6 +250,10 @@ def make_small_pages(menudb, osusume, ini_bundle, schema_version="0.1"):
                         span_y = max(1, max(ys) - min_y + 1)
                         frame_idx = slot.get("frame_index")
                         image_path = frame_images.get(frame_idx, "") if frame_idx else ""
+                        multi_lang_image_paths = {
+                            lang: imgs.get(frame_idx, "")
+                            for lang, imgs in multi_lang_images.items()
+                        }
                         product_info = info_by_code.get(code)
                         product_detail = dict(product_info) if isinstance(product_info, dict) else {"code": code}
                         osusume_meta = frames_meta.get(code, {})
@@ -258,6 +263,7 @@ def make_small_pages(menudb, osusume, ini_bundle, schema_version="0.1"):
                             "span": [span_x, span_y],
                             "process": 0,
                             "image": image_path,
+                            "multi_lang_images": multi_lang_image_paths,
                             "product_detail": product_detail,
                             "cells_path": "",
                             "osusume": osusume_meta,
@@ -278,6 +284,10 @@ def make_small_pages(menudb, osusume, ini_bundle, schema_version="0.1"):
                         span_y = max(1, max(ys) - min_y + 1)
                         frame_idx = frame_index_by_code.get(code)
                         image_path = frame_images.get(frame_idx, "") if frame_idx else ""
+                        multi_lang_image_paths = {
+                            lang: imgs.get(frame_idx, "")
+                            for lang, imgs in multi_lang_images.items()
+                        }
                         product_info = info_by_code.get(code)
                         product_detail = dict(product_info) if isinstance(product_info, dict) else {"code": code}
                         osusume_meta = frames_meta.get(code, {})
@@ -287,6 +297,7 @@ def make_small_pages(menudb, osusume, ini_bundle, schema_version="0.1"):
                             "span": [span_x, span_y],
                             "process": 0,
                             "image": image_path,
+                            "multi_lang_images": multi_lang_image_paths,
                             "product_detail": product_detail,
                             "cells_path": "",
                             "osusume": osusume_meta,

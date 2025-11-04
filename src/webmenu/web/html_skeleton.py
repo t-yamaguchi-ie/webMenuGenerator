@@ -66,7 +66,6 @@ _CSS_STAGE = dedent(
     """
     .stage {
       width: 1000px;
-      margin: 16px auto 48px;
       display: flex;
       flex-direction: column;
       gap: 12px;
@@ -206,10 +205,6 @@ _HTML_AFTER_STYLE = """</style>
 </div>
 <div class="stage">
   <div id="log">Ready</div>
-
-  <!-- 多言語 -->
-  <div id="langDisplay">Lang: --</div>
-  
   <div id="canvas" class="canvas">
     <div id="grid" class="grid"></div>
   </div>
@@ -221,13 +216,8 @@ const ABS_COLS = 40;
 const ABS_ROWS = 20;
 const cache = { products: null, categories: null, cells: new Map() };
 
-<!-- 多言語表示エリア -->
-function onLangData(langNo, langPath) {
-    const display = document.getElementById('langDisplay');
-    if (display) {
-        display.textContent = `Lang No: ${langNo}, Path: ${langPath}`;
-    }
-}
+<!-- 現在の言語設定を維持する -->
+let currentLangPath = "default";
 
 async function fetchJson(path) {
   const res = await fetch(path);
@@ -341,14 +331,12 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType) {
     tile.appendChild(inner);
 
     const osusumeMeta = gi.osusume || {};
-    let imageSrc = gi.image || product.image || '';
+    let imageSrc = getMultiLangImage(gi, product);
     if (imageSrc) {
-      if (!imageSrc.startsWith('./') && !imageSrc.startsWith('/') && !imageSrc.startsWith('http') && !imageSrc.startsWith('data:')) {
-        imageSrc = `./assets/${imageSrc}`;
-      }
       const img = document.createElement('img');
       img.src = imageSrc;
       img.alt = '';
+      img.dataset.code = gi.product_code;
       const markLoaded = () => {
         requestAnimationFrame(() => img.classList.add('is-loaded'));
       };
@@ -481,6 +469,7 @@ function handleSelectionChange(cats, initialLoad=false) {
   }
 }
 
+<!--大分類の切り替え -->
 function changeLMenu(lValue) {
     var select = document.getElementById('lSelect');
     select.value = `L${String(lValue).padStart(2, '0')}`; 
@@ -488,16 +477,71 @@ function changeLMenu(lValue) {
     return true;
 }
 
+<!--中分類の切り替え -->
 function changeMMenu(lValue, mValue) {
-    // 大分類の切り替え
     changeLMenu(lValue);
- 
-    // 中分類の切り替え
+    
     var select = document.getElementById('mSelect');
     select.value = `M${String(lValue).padStart(2, '0')}${String(mValue).padStart(2, '0')}`; 
     select.dispatchEvent(new Event('change', { bubbles: true }));
  
     return true;
+}
+
+<!-- 多言語表示エリア -->
+function onLangData(langPath) {
+    currentLangPath = langPath || "default";
+    refreshAllImages();
+}
+
+<!-- 多言語対応の画像パスを取得する -->
+function getMultiLangImage(gi,product) {
+    let imageSrc = '';
+
+    if (gi.multi_lang_images) {
+        if (gi.multi_lang_images[currentLangPath]) {
+            imageSrc = gi.multi_lang_images[currentLangPath];
+        } else {
+            imageSrc = gi.multi_lang_images["default"] || '';
+        }
+    }
+
+    if (!imageSrc) {
+        imageSrc = gi.image || product.image || '';
+    }
+    
+    if (imageSrc && !imageSrc.startsWith('./') && !imageSrc.startsWith('/') && !imageSrc.startsWith('http') && !imageSrc.startsWith('data:')) {
+        imageSrc = `./assets/${imageSrc}`;
+    }
+    
+    return imageSrc;
+}
+
+<!-- 全画像を言語に合わせて更新する -->
+async function refreshAllImages() {
+    const sid = getSelectedSmallId();
+    if (!sid) {
+      log.textContent = 'small ID が未入力です';
+      grid.innerHTML = '';
+      canvas.style.backgroundImage = 'none';
+      return;
+    }
+        
+    const productMap = await ensureProducts();
+    const page = await fetchJson(`./small/${sid}/page-1.json`);
+    const gridItems = page.grid_items || [];
+    
+    const imgs = document.querySelectorAll('img[data-code]');
+
+    imgs.forEach(img => {
+      const code = img.dataset.code;
+      const gi = gridItems.find(g => g.product_code === code);
+      const product = productMap.get(code) || {};
+      if (!gi) return;
+      
+      let newSrc = getMultiLangImage(gi, product);
+      img.src = newSrc;
+    });
 }
 
 (async () => {
