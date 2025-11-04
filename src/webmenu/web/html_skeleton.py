@@ -205,6 +205,10 @@ _HTML_AFTER_STYLE = """</style>
 </div>
 <div class="stage">
   <div id="log">Ready</div>
+  
+  <!-- Test用 -->
+  <div id="shinagire">shinagire</div>
+  
   <div id="canvas" class="canvas">
     <div id="grid" class="grid"></div>
   </div>
@@ -218,6 +222,9 @@ const cache = { products: null, categories: null, cells: new Map() };
 
 <!-- 現在の言語設定を維持する -->
 let currentLangPath = "default";
+
+<!-- 品切れ情報を維持する -->
+let soldOutData = {};
 
 async function fetchJson(path) {
   const res = await fetch(path);
@@ -542,6 +549,21 @@ async function refreshAllImages() {
       let newSrc = getMultiLangImage(gi, product);
       img.src = newSrc;
     });
+}
+
+<!-- 品切れ情報を維持する -->
+function receiveSoldOutMsg(json) {
+  soldOutData = JSON.parse(json) || {};
+  localStorage.setItem("SOLD_OUT_CACHE", json);
+  refreshSoldOutDisplay();
+}
+
+<!-- 品切れ情報を表示する -->
+function refreshSoldOutDisplay() {
+   const div = document.getElementById("shinagire");
+    if (!div) return;
+    
+    div.textContent = `品切れデータ： ${JSON.stringify(soldOutData, null, 2)}`;
 }
 
 (async () => {
