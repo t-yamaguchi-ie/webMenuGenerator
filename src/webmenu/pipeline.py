@@ -10,9 +10,11 @@ from .dumpers.raw_dump_writer import write_raw_dump
 from .mapping.to_web_products import make_products
 from .mapping.to_web_categories import make_categories
 from .mapping.to_web_small_pages import make_small_pages
+from .mapping.to_web_soldout import make_soldout_json
 from .web.html_skeleton import write_index_html
 from .web.validate import validate_all
 from .dumpers.assets_exporter import export_assets
+from .dumpers.assets_exporter import export_soldout_assets
 
 ASSET_PREFIX_FREE = "free_images/"
 
@@ -85,12 +87,15 @@ def run_pipeline(args):
         schema_version=args.schema_version
     )
     categories = make_categories(menudb, ini_bundle, small_pages, schema_version=args.schema_version)
+    soldout = make_soldout_json(ini_bundle)
 
     # Emit web_content
     with open(os.path.join(web_dir, "menudb.json"), "w", encoding="utf-8") as f:
         json.dump(products, f, ensure_ascii=False, indent=2)
     with open(os.path.join(web_dir, "categories.json"), "w", encoding="utf-8") as f:
         json.dump(categories, f, ensure_ascii=False, indent=2)
+    with open(os.path.join(web_dir, "soldout.json"), "w", encoding="utf-8") as f:
+        json.dump(soldout, f, ensure_ascii=False, indent=2)
     for rel_path, payload in small_pages.items():
         p = os.path.join(web_dir, rel_path)
         os.makedirs(os.path.dirname(p), exist_ok=True)
@@ -110,6 +115,11 @@ def run_pipeline(args):
             args.osusume,
             os.path.join(web_dir, "assets"),
             required_assets=required_assets
+        )
+        export_soldout_assets(
+            args.free,
+            os.path.join(web_dir, "assets"),
+            soldout
         )
 
     write_index_html(web_dir, show_dev_ui=args.show_dev_ui)

@@ -2,6 +2,7 @@ import os, shutil
 
 FREE_PREFIX = "free_images/"
 OSUSUME_PREFIX = "osusume_images/"
+SOLDOUT_PREFIX = "soldout_images/"
 
 
 def export_assets(free_dir:str, osusume_dir:str, out_assets_dir:str, required_assets=None):
@@ -39,3 +40,25 @@ def export_assets(free_dir:str, osusume_dir:str, out_assets_dir:str, required_as
             shutil.rmtree(dst)
         shutil.copytree(src, dst)
     # TODO: osusume 側の画像コピーも追加
+
+
+def export_soldout_assets(free_dir:str,out_assets_dir:str, soldout):
+    if not soldout:
+        return
+    
+    source_dir = os.path.join(free_dir, "images")
+    target_dir = os.path.join(out_assets_dir, "soldout")
+    os.makedirs(target_dir, exist_ok=True)
+    
+    
+    def copy_images(d):
+        for key, value in d.items():
+            if isinstance(value, dict):
+                copy_images(value)
+            elif isinstance(value, str) and value.strip():
+                source_path = os.path.join(source_dir, value)
+                target_path = os.path.join(target_dir, value)
+                if os.path.exists(source_path):
+                    shutil.copy2(source_path, target_path)
+
+    copy_images(soldout)

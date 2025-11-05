@@ -98,7 +98,6 @@ _CSS_CANVAS = dedent(
       width: 1000px;
       height: 533px;
       border: 1px solid #d0d0d0;
-      border-radius: 12px;
       overflow: hidden;
       background: #f2f2f2 center/cover no-repeat;
       box-shadow: 0 4px 12px rgba(0,0,0,0.12);
@@ -121,7 +120,6 @@ _CSS_TILE = dedent(
     .tile {
       position: absolute;
       box-sizing: border-box;
-      border-radius: 10px;
       background: transparent;
       border: none;
       overflow: hidden;
@@ -157,6 +155,36 @@ _CSS_TILE_IMAGE = dedent(
     """
 ).strip()
 
+_CSS_SOLDOUT_LAYER = dedent(
+    """
+    .tile-inner div.soldout-layer {
+      position: absolute;
+      inset: 0;
+      display: none; 
+      justify-content: center;
+      align-items: center;
+      pointer-events: auto;
+      background: transparent; 
+      z-index: 20;
+    }
+    """
+).strip()
+
+_CSS_SOLDOUT = dedent(
+    """
+    .tile-inner img.soldout-img {
+      position: absolute;
+      background: transparent;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: auto;
+      height: auto;
+      opacity: 1;
+    }
+    """
+).strip()
+
 _CSS_CELL_LAYER = dedent(
     """
     .cell-layer {
@@ -171,7 +199,6 @@ _CSS_CELL_BOX = dedent(
       position: absolute;
       border: 1px solid rgba(0, 120, 255, 0.5);
       background: rgba(0, 120, 255, 0.15);
-      border-radius: 2px;
       box-sizing: border-box;
     }
     """
@@ -206,9 +233,6 @@ _HTML_AFTER_STYLE = """</style>
 <div class="stage">
   <div id="log">Ready</div>
   
-  <!-- Test用 -->
-  <div id="shinagire">shinagire</div>
-  
   <div id="canvas" class="canvas">
     <div id="grid" class="grid"></div>
   </div>
@@ -218,13 +242,13 @@ const CANVAS_WIDTH = 1000;
 const CANVAS_HEIGHT = 533;
 const ABS_COLS = 40;
 const ABS_ROWS = 20;
-const cache = { products: null, categories: null, cells: new Map() };
+const cache = { products: null, categories: null, cells: new Map(), soldout_settings: null };
 
 <!-- 現在の言語設定を維持する -->
 let currentLangPath = "default";
 
 <!-- 品切れ情報を維持する -->
-let soldOutData = {};
+let soldOutData = new Map();
 
 async function fetchJson(path) {
   const res = await fetch(path);
@@ -262,6 +286,16 @@ async function ensureCells(path) {
   const data = await fetchJson(`./${path}`);
   cache.cells.set(path, data);
   return data;
+}
+
+<!-- 品切れ設定情報を取得する -->
+async function ensureSoldoutSettings() {
+  if (cache.soldout_settings) {
+    return cache.soldout_settings;
+  }
+  const soldout_settings = await fetchJson('./soldout.json');
+  cache.soldout_settings = soldout_settings;
+  return soldout_settings;
 }
 
 function applyBackground(canvasEl, page) {
@@ -308,7 +342,7 @@ function layoutCanvas(items) {
   };
 }
 
-function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType) {
+function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType, soldout_settings) {
   const tiles = [];
   for (const gi of items) {
     const product = productMap.get(gi.product_code) || {};
@@ -354,12 +388,45 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType) {
         img.addEventListener('error', markLoaded, { once: true });
       }
       
-      // クリックイベントを追加
+      <!--  クリックイベントを追加 -->
       const link = document.createElement('a');
       link.href = `a-menu://webAddOrder?data=${encodeURIComponent(JSON.stringify(gi))}`;
       link.appendChild(img);
       inner.appendChild(link);
     }
+    
+    <!--  品切れ画像表示 -->
+    const soldoutLayer = document.createElement('div');
+    soldoutLayer.className = 'soldout-layer';
+    soldoutLayer.dataset.code = gi.product_code;
+    soldoutLayer.style.display = 'none';
+    
+    const soldoutImg  = document.createElement('img');
+    soldoutImg.className = 'soldout-img';
+    soldoutImg.alt = 'Sold Out';
+    soldoutImg.dataset.code = gi.product_code;
+    soldoutImg.style.display = 'none';
+    
+    soldoutLayer.appendChild(soldoutImg);
+      
+    let soldOutImgSrc = getSoldOutImage(gi, soldout_settings);
+    
+    if (soldOutImgSrc) {
+      soldoutImg.src = soldOutImgSrc;
+      soldoutImg.style.display = "";
+     
+      soldoutLayer.style.display = "flex";
+      soldoutLayer.style.pointerEvents = "auto";
+      soldoutLayer.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+    } else {
+      soldoutImg.style.display = "none";
+      soldoutLayer.style.display = "none";
+    }
+    
+    inner.appendChild(soldoutLayer);
 
     const cellsPath = gi.cells_path;
     const cellEntries = cellsPath ? (cellsData[cellsPath]?.cells || {}) : {};
@@ -430,7 +497,8 @@ async function run() {
     applyBackground(canvas, page);
     const layout = layoutCanvas(page.grid_items || []);
     const layoutType = page.layout_type || page.page_meta?.layout_type || 'free';
-    renderTiles(grid, page.grid_items || [], productMap, layout, cellsData, layoutType);
+    const soldout_settings = await ensureSoldoutSettings();
+    renderTiles(grid, page.grid_items || [], productMap, layout, cellsData, layoutType, soldout_settings);
 
     log.textContent = `Loaded ${sid} (items: ${page.grid_items?.length || 0}, layout: ${page.layout_type})`;
   } catch (err) {
@@ -551,19 +619,81 @@ async function refreshAllImages() {
     });
 }
 
+<!-- 品切れ対応の画像パスを取得する -->
+function getSoldOutImage(gi, soldout_settings) {
+  let imageSrc = '';
+
+  if (!soldOutData) return imageSrc;
+
+  const soldOutFlag = soldOutData.get(gi.product_code);
+    
+  if (soldOutFlag && soldOutFlag !== 0) {
+    if (gi.layout_type === 'recommended' && gi.osusume) {
+      imageSrc = soldout_settings.frm_btn_images[soldOutFlag];
+    } else {
+      imageSrc = soldout_settings.cell_btn_images[soldOutFlag];
+    }
+  }
+    
+  if (imageSrc && !imageSrc.startsWith('./') && !imageSrc.startsWith('/') && !imageSrc.startsWith('http') && !imageSrc.startsWith('data:')) {
+      imageSrc = `./assets/soldout/${imageSrc}`;
+  }
+
+  return imageSrc;
+}
+
 <!-- 品切れ情報を維持する -->
 function receiveSoldOutMsg(json) {
-  soldOutData = JSON.parse(json) || {};
-  localStorage.setItem("SOLD_OUT_CACHE", json);
+  const data = JSON.parse(json) || {};
+  soldOutData = new Map(
+    data.map(item => [String(item.item_code), item.sold_out_flag])
+  );
   refreshSoldOutDisplay();
 }
 
-<!-- 品切れ情報を表示する -->
-function refreshSoldOutDisplay() {
-   const div = document.getElementById("shinagire");
-    if (!div) return;
-    
-    div.textContent = `品切れデータ： ${JSON.stringify(soldOutData, null, 2)}`;
+<!-- 品切れ表示を更新する -->
+async function refreshSoldOutDisplay() {
+  if (!(soldOutData instanceof Map)) return;
+  
+  const sid = getSelectedSmallId();
+  if (!sid) {
+      log.textContent = 'small ID が未入力です';
+      grid.innerHTML = '';
+      canvas.style.backgroundImage = 'none';
+      return;
+  }
+  
+  const soldout_settings = await ensureSoldoutSettings();
+  const page = await fetchJson(`./small/${sid}/page-1.json`);
+  const gridItems = page.grid_items || [];
+  
+  const soldouts = document.querySelectorAll('img.soldout-img[data-code]')
+  soldouts.forEach(img => {
+      const code = img.dataset.code;
+      const gi = gridItems.find(g => g.product_code === code);
+      if (!gi) return;
+      
+      let newSrc = getSoldOutImage(gi, soldout_settings);
+      
+      const soldoutLayer = document.querySelector(`div.soldout-layer[data-code="${code}"]`);
+      
+      if (newSrc) {
+        img.src = newSrc;
+        img.style.display = "block";
+        
+        soldoutLayer.style.display = "flex";
+        soldoutLayer.style.pointerEvents = "auto";
+        soldoutLayer.addEventListener('click', e => {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+      } else {
+        img.style.display = "none";
+        
+        soldoutLayer.style.display = "none";
+        soldoutLayer.style.pointerEvents = "none";
+      }
+    });
 }
 
 (async () => {
@@ -616,6 +746,8 @@ def _build_css(show_dev_ui: bool) -> str:
         _CSS_TILE,
         _CSS_TILE_INNER,
         _CSS_TILE_IMAGE,
+        _CSS_SOLDOUT_LAYER,
+        _CSS_SOLDOUT,
         _CSS_CELL_LAYER,
         _CSS_CELL_BOX,
         _CSS_TILE_META,
