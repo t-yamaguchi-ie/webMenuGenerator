@@ -426,6 +426,13 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType, s
       soldoutLayer.style.display = "none";
     }
     
+    const soldOutState = getSoldOutState(gi,soldout_settings);
+    if (soldOutState === "1") {
+      soldoutLayer.style.background = 'rgba(0, 0, 0, 1)';
+    } else {
+      soldoutLayer.style.background = 'transparent';
+    }
+    
     inner.appendChild(soldoutLayer);
 
     const cellsPath = gi.cells_path;
@@ -563,8 +570,8 @@ function changeMMenu(lValue, mValue) {
     return true;
 }
 
-<!-- 多言語表示エリア -->
-function onLangData(langPath) {
+<!-- 多言語情報を取得する -->
+function receiveLangMsg(langPath) {
     currentLangPath = langPath || "default";
     refreshAllImages();
 }
@@ -592,7 +599,7 @@ function getMultiLangImage(gi,product) {
     return imageSrc;
 }
 
-<!-- 全画像を言語に合わせて更新する -->
+<!-- 商品画像を言語に合わせて更新する -->
 async function refreshAllImages() {
     const sid = getSelectedSmallId();
     if (!sid) {
@@ -619,32 +626,9 @@ async function refreshAllImages() {
     });
 }
 
-<!-- 品切れ対応の画像パスを取得する -->
-function getSoldOutImage(gi, soldout_settings) {
-  let imageSrc = '';
-
-  if (!soldOutData) return imageSrc;
-
-  const soldOutFlag = soldOutData.get(gi.product_code);
-    
-  if (soldOutFlag && soldOutFlag !== 0) {
-    if (gi.layout_type === 'recommended' && gi.osusume) {
-      imageSrc = soldout_settings.frm_btn_images[soldOutFlag];
-    } else {
-      imageSrc = soldout_settings.cell_btn_images[soldOutFlag];
-    }
-  }
-    
-  if (imageSrc && !imageSrc.startsWith('./') && !imageSrc.startsWith('/') && !imageSrc.startsWith('http') && !imageSrc.startsWith('data:')) {
-      imageSrc = `./assets/soldout/${imageSrc}`;
-  }
-
-  return imageSrc;
-}
-
-<!-- 品切れ情報を維持する -->
-function receiveSoldOutMsg(json) {
-  const data = JSON.parse(json) || {};
+<!-- 品切れ情報を取得する -->
+function receiveSoldOutMsg(soldoutList) {
+  const data = JSON.parse(soldoutList) || {};
   soldOutData = new Map(
     data.map(item => [String(item.item_code), item.sold_out_flag])
   );
@@ -693,7 +677,44 @@ async function refreshSoldOutDisplay() {
         soldoutLayer.style.display = "none";
         soldoutLayer.style.pointerEvents = "none";
       }
+      
+      const soldOutState = getSoldOutState(gi,soldout_settings);
+      if (soldOutState === "1") {
+        soldoutLayer.style.background = 'rgba(0, 0, 0, 1)';
+      } else {
+        soldoutLayer.style.background = 'transparent';
+      }
     });
+}
+
+<!-- 品切れ状態を取得する -->
+function getSoldOutState(gi, soldout_settings) {
+  if (!soldOutData || !gi || !gi.product_code) return 0;
+  const soldOutFlag = soldOutData.get(String(gi.product_code));
+  return soldout_settings?.sort_soldout_state?.[soldOutFlag] || 0;
+}
+
+<!-- 品切れ対応の画像パスを取得する -->
+function getSoldOutImage(gi, soldout_settings) {
+  let imageSrc = '';
+
+  if (!soldOutData) return imageSrc;
+
+  const soldOutFlag = soldOutData.get(gi.product_code);
+    
+  if (soldOutFlag && soldOutFlag !== 0) {
+    if (gi.layout_type === 'recommended' && gi.osusume) {
+      imageSrc = soldout_settings.frm_btn_images[soldOutFlag];
+    } else {
+      imageSrc = soldout_settings.cell_btn_images[soldOutFlag];
+    }
+  }
+    
+  if (imageSrc && !imageSrc.startsWith('./') && !imageSrc.startsWith('/') && !imageSrc.startsWith('http') && !imageSrc.startsWith('data:')) {
+      imageSrc = `./assets/soldout/${imageSrc}`;
+  }
+
+  return imageSrc;
 }
 
 (async () => {
