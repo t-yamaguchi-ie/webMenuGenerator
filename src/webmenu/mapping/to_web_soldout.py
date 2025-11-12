@@ -50,7 +50,7 @@ def make_soldout_json(ini_bundle):
         "backImage": soldout_settings.get("BackImgName", ""),
         "frm_btn_images": frm_btn_images,
         "cell_btn_images": cell_btn_images,
-        "use_item_sort": sort_soldout_state.get("UseItemSort","0"),
-        "sort_item_frame": sort_soldout_state.get("SortItemFrame","0"), 
+        "use_item_sort": osusume_settings.get("UseItemSort","0"),
+        "sort_hide_frame": osusume_settings.get("SortHideFrame","0"), 
         "sort_soldout_state": sort_soldout_state
     }

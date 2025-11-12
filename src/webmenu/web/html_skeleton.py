@@ -370,8 +370,8 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType, s
     const inner = document.createElement('div');
     inner.className = 'tile-inner';
     tile.appendChild(inner);
-
-    const osusumeMeta = gi.osusume || {};
+   
+    <!--  画像を生成 -->
     let imageSrc = getMultiLangImage(gi, product);
     if (imageSrc) {
       const img = document.createElement('img');
@@ -423,15 +423,14 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType, s
       });
     } else {
       soldoutImg.style.display = "none";
+      
+      soldoutLayer.style.pointerEvents = "none";
       soldoutLayer.style.display = "none";
     }
     
-    const soldOutState = getSoldOutState(gi,soldout_settings);
-    if (soldOutState === "1") {
-      soldoutLayer.style.background = 'rgba(0, 0, 0, 1)';
-    } else {
-      soldoutLayer.style.background = 'transparent';
-    }
+    const soldOutFlag = soldOutData.get(gi.product_code);
+    soldoutImg.style.width = (soldOutFlag === 4) ? "100%" : "auto";
+    soldoutImg.style.height = (soldOutFlag === 4) ? "100%" : "auto";
     
     inner.appendChild(soldoutLayer);
 
@@ -455,6 +454,7 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType, s
       inner.appendChild(layer);
     }
 
+    const osusumeMeta = gi.osusume || {};
     const name = (layoutType === 'recommended' && osusumeMeta.text1) ? osusumeMeta.text1 : (product.name || gi.product_detail?.name || gi.product_code);
     const price = (() => {
       if (layoutType === 'recommended' && osusumeMeta.tanka) {
@@ -652,8 +652,8 @@ async function refreshSoldOutDisplay() {
   const gridItems = page.grid_items || [];
   
   const soldouts = document.querySelectorAll('img.soldout-img[data-code]')
-  soldouts.forEach(img => {
-      const code = img.dataset.code;
+  soldouts.forEach(soldoutImg => {
+      const code = soldoutImg.dataset.code;
       const gi = gridItems.find(g => g.product_code === code);
       if (!gi) return;
       
@@ -662,8 +662,8 @@ async function refreshSoldOutDisplay() {
       const soldoutLayer = document.querySelector(`div.soldout-layer[data-code="${code}"]`);
       
       if (newSrc) {
-        img.src = newSrc;
-        img.style.display = "block";
+        soldoutImg.src = newSrc;
+        soldoutImg.style.display = "block";
         
         soldoutLayer.style.display = "flex";
         soldoutLayer.style.pointerEvents = "auto";
@@ -672,18 +672,15 @@ async function refreshSoldOutDisplay() {
           e.stopPropagation();
         });
       } else {
-        img.style.display = "none";
+        soldoutImg.style.display = "none";
         
         soldoutLayer.style.display = "none";
         soldoutLayer.style.pointerEvents = "none";
       }
       
-      const soldOutState = getSoldOutState(gi,soldout_settings);
-      if (soldOutState === "1") {
-        soldoutLayer.style.background = 'rgba(0, 0, 0, 1)';
-      } else {
-        soldoutLayer.style.background = 'transparent';
-      }
+      const soldOutFlag = soldOutData.get(gi.product_code);
+      soldoutImg.style.width = (soldOutFlag === 4) ? "100%" : "auto";
+      soldoutImg.style.height = (soldOutFlag === 4) ? "100%" : "auto";
     });
 }
 
