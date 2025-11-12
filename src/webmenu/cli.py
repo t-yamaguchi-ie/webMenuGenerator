@@ -1,3 +1,24 @@
+"""
+WebMenuGenerator CLI モジュール
+
+このモジュールは、レガシーデータ（free ディレクトリや osusume ディレクトリ）から
+最新の web_content ディレクトリを生成するコマンドラインインターフェイス（CLI）です。
+
+主な処理の流れ:
+  1. コマンドライン引数の解析
+  2. generate コマンドにより run_pipeline を呼び出し
+  3. run_pipeline 内でレガシーデータの読み込み、JSON生成、必要アセットの収集・コピー
+  4. 最終的に web_content ディレクトリと index.html を出力
+
+提供されるオプション:
+  --free           : free ディレクトリのパス
+  --osusume        : osusume ディレクトリのパス
+  --out            : 出力先ルートディレクトリ
+  --ref            : 任意のビルド識別子（未指定時は自動生成）
+  --schema-version : web_content のスキーマバージョン
+  --skip-assets    : アセットコピー/最適化をスキップ
+  --show-dev-ui    : 生成される index.html に開発用UIを表示
+"""
 import argparse
 from .pipeline import run_pipeline
 
