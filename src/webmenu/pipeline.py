@@ -1,8 +1,16 @@
+# ============================================================
+# パイプライン処理用モジュール
+# - ini/json からメニュー情報を読み込み
+# - web 用データに変換して出力
+# - 必要なアセットを収集してコピー
+# ============================================================
+
 # 先頭のimportをこうする（os/jsonはトップレベルで）
 import os
 import json
 import datetime
 
+# 自作モジュール
 from .parsers.ini_loader import load_all_ini
 from .parsers.menudb_reader import read_menudb
 from .parsers.osusume_reader import read_osusume
@@ -18,7 +26,10 @@ from .dumpers.assets_exporter import export_soldout_assets
 
 ASSET_PREFIX_FREE = "free_images/"
 
-
+# ------------------------------------------------------------
+# アセットパス正規化
+# 文字列の空チェック＋前後スペース削除
+# ------------------------------------------------------------
 def _normalize_asset_path(name: str) -> str:
     if not name:
         return ""
@@ -27,7 +38,9 @@ def _normalize_asset_path(name: str) -> str:
         return ""
     return name
 
-
+# ------------------------------------------------------------
+# small_pages 内の必要アセットを収集
+# ------------------------------------------------------------
 def collect_required_assets(small_pages: dict) -> set[str]:
     assets: set[str] = set()
     for payload in small_pages.values():
@@ -58,7 +71,11 @@ def collect_required_assets(small_pages: dict) -> set[str]:
                     assets.add(path)
     return assets
 
-
+# ------------------------------------------------------------
+# パイプライン実行
+# メニュー関連データを読み込んで加工し、Web向けに出力する一連の処理
+# args: コマンドライン引数オブジェクト
+# ------------------------------------------------------------
 def run_pipeline(args):
     # ★ここから下、関数内に「import json, os」は置かない！
     ref = args.ref or datetime.datetime.now().strftime("%Y%m%d-%H%M%S-000000")
