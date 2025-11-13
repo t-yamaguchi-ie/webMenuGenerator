@@ -344,18 +344,48 @@ function layoutCanvas(items) {
 
 function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType, soldout_settings) {
   const tiles = [];
-  for (const gi of items) {
+  let renderIndex = 0; // 可见タイルのレンダリング順インデックス
+  
+  for (let i = 0; i < items.length; i++) {
+    const gi = items[i];
+    // 表示位置を決定
+    const placeInfo = items[renderIndex];
+    
+    <!-- 品切れ整列機能 -->
+    const soldOutState = getSoldOutState(gi, soldout_settings);
+    // gi.osusume が存在しない、またはおすすめフレーム非表示、または品切れの場合は非表示対象
+    const isSortTarget = (
+      !gi.osusume || 
+      (soldout_settings?.sort_hide_frame === "1" && gi.osusume.show === "0") ||
+      soldOutState === "1"
+    );
+      
+    // 並べ替えが有効な場合のみ前詰め処理
+    if (soldout_settings?.use_item_sort === "1") {
+      if (!isSortTarget) {
+        // 非表示でない場合はレンダリングインデックスを使う
+        renderIndex++;
+      } else {
+        // 非表示の場合はスキップ
+        continue;
+      }
+    } else {
+      // 並べ替え無効の場合は元のインデックスを使用
+      renderIndex = i;
+    }
+    
     const product = productMap.get(gi.product_code) || {};
     const tile = document.createElement('div');
     tile.className = 'tile';
+    tile.dataset.code = gi.product_code;
     if (layoutType === 'recommended' || gi.osusume) {
       tile.classList.add('tile--recommended');
     }
 
-    const spanX = Math.max(1, gi.span?.[0] ?? 1);
-    const spanY = Math.max(1, gi.span?.[1] ?? 1);
-    const rawX = gi.cell?.[0] ?? 0;
-    const rawY = gi.cell?.[1] ?? 0;
+    const spanX = Math.max(1, placeInfo.span?.[0] ?? 1);
+    const spanY = Math.max(1, placeInfo.span?.[1] ?? 1);
+    const rawX = placeInfo.cell?.[0] ?? 0;
+    const rawY = placeInfo.cell?.[1] ?? 0;
 
     const left = (rawX - layout.offsetX) * layout.scaleX;
     const top = (rawY - layout.offsetY) * layout.scaleY;
@@ -627,61 +657,71 @@ async function refreshAllImages() {
 }
 
 <!-- 品切れ情報を取得する -->
-function receiveSoldOutMsg(soldoutList) {
-  const data = JSON.parse(soldoutList) || {};
+async function receiveSoldOutMsg(soldoutList) {
+  let data = [];
+  try {
+    data = JSON.parse(soldoutList);
+    if (!Array.isArray(data)) data = [];
+  } catch (err) {
+    console.error('soldoutList の解析に失敗しました:', err);
+    data = [];
+  }
+
+  // soldOutData を Map に変換（全局変数として使用する場合）
   soldOutData = new Map(
     data.map(item => [String(item.item_code), item.sold_out_flag])
   );
-  refreshSoldOutDisplay();
+
+  // カテゴリ情報を取得して refreshPage を呼び出す
+  const cats = await ensureCategories();
+  refreshPage(cats);
 }
 
-<!-- 品切れ表示を更新する -->
-async function refreshSoldOutDisplay() {
-  if (!(soldOutData instanceof Map)) return;
-  
-  const sid = getSelectedSmallId();
-  if (!sid) {
-      log.textContent = 'small ID が未入力です';
-      grid.innerHTML = '';
-      canvas.style.backgroundImage = 'none';
-      return;
+
+<!-- 現在画面表示を更新する -->
+async function refreshPage(cats) {
+  try {
+    const lSelect = document.getElementById('lSelect');
+    const mSelect = document.getElementById('mSelect');
+    const sSelect = document.getElementById('sSelect');
+
+    // 現在の選択を保存
+    const currentL = lSelect.value;
+    const currentM = mSelect.value;
+    const currentS = sSelect.value;
+
+    // L（大カテゴリ）のドロップダウンを再構築
+    const lOptions = (cats.tree || []).map(l => ({ value: l.id, label: l.label }));
+    populateSelect(lSelect, lOptions);
+
+    // L の選択を復元
+    if (lOptions.some(o => o.value === currentL)) {
+      lSelect.value = currentL;
+    } else {
+      lSelect.value = lOptions[0]?.value || '';
+    }
+
+    // M/S（中カテゴリ/小カテゴリ）下位ドロップダウンを更新
+    handleSelectionChange(cats, true);
+
+    // M/S の選択を復元
+    const lNode = (cats.tree || []).find(l => l.id === lSelect.value);
+    const mNode = (lNode?.children || []).find(m => m.id === currentM);
+    if (mNode) {
+      mSelect.value = currentM;
+      populateSelect(sSelect, (mNode.pages || []).map(p => ({ value: p.id, label: p.label })));
+    }
+    if ((mNode?.pages || []).some(p => p.id === currentS)) {
+      sSelect.value = currentS;
+    } else {
+      sSelect.value = (mNode?.pages || [])[0]?.id || '';
+    }
+    
+    run();
+
+  } catch (err) {
+    console.error('ページ更新に失敗しました', err);
   }
-  
-  const soldout_settings = await ensureSoldoutSettings();
-  const page = await fetchJson(`./small/${sid}/page-1.json`);
-  const gridItems = page.grid_items || [];
-  
-  const soldouts = document.querySelectorAll('img.soldout-img[data-code]')
-  soldouts.forEach(soldoutImg => {
-      const code = soldoutImg.dataset.code;
-      const gi = gridItems.find(g => g.product_code === code);
-      if (!gi) return;
-      
-      let newSrc = getSoldOutImage(gi, soldout_settings);
-      
-      const soldoutLayer = document.querySelector(`div.soldout-layer[data-code="${code}"]`);
-      
-      if (newSrc) {
-        soldoutImg.src = newSrc;
-        soldoutImg.style.display = "block";
-        
-        soldoutLayer.style.display = "flex";
-        soldoutLayer.style.pointerEvents = "auto";
-        soldoutLayer.addEventListener('click', e => {
-          e.preventDefault();
-          e.stopPropagation();
-        });
-      } else {
-        soldoutImg.style.display = "none";
-        
-        soldoutLayer.style.display = "none";
-        soldoutLayer.style.pointerEvents = "none";
-      }
-      
-      const soldOutFlag = soldOutData.get(gi.product_code);
-      soldoutImg.style.width = (soldOutFlag === 4) ? "100%" : "auto";
-      soldoutImg.style.height = (soldOutFlag === 4) ? "100%" : "auto";
-    });
 }
 
 <!-- 品切れ状態を取得する -->
