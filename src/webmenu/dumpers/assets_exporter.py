@@ -47,7 +47,7 @@ def export_soldout_assets(free_dir:str,out_assets_dir:str, soldout):
         return
     
     source_dir = os.path.join(free_dir, "images")
-    target_dir = os.path.join(out_assets_dir, "soldout")
+    target_dir = os.path.join(out_assets_dir, "soldout_images")
     os.makedirs(target_dir, exist_ok=True)
     
     
