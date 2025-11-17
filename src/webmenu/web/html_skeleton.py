@@ -188,7 +188,7 @@ _CSS_SOLDOUT = dedent(
 _CSS_CELL_LAYER = dedent(
     """
     .cell-layer {
-      display: none;
+      display: block;
     }
     """
 ).strip()
@@ -197,8 +197,8 @@ _CSS_CELL_BOX = dedent(
     """
     .cell-box {
       position: absolute;
-      border: 1px solid rgba(0, 120, 255, 0.5);
-      background: rgba(0, 120, 255, 0.15);
+      border: none;
+      background: transparent;
       box-sizing: border-box;
     }
     """
@@ -371,7 +371,7 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType, s
       }
     } else {
       // 並べ替え無効の場合は元のインデックスを使用
-      renderIndex = i;
+      renderIndex = i + 1;
     }
     
     const product = productMap.get(gi.product_code) || {};
@@ -479,7 +479,11 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType, s
         cellDiv.style.top = `${(cy - baseY) * layout.scaleY}px`;
         cellDiv.style.width = `${layout.scaleX}px`;
         cellDiv.style.height = `${layout.scaleY}px`;
-        layer.appendChild(cellDiv);
+        <!--  クリックイベントを追加 -->
+        const link = document.createElement('a');
+        link.href = `a-menu://webAddOrder?data=${encodeURIComponent(JSON.stringify(gi))}`;
+        link.appendChild(cellDiv);
+        layer.appendChild(link);
       }
       inner.appendChild(layer);
     }
@@ -748,7 +752,7 @@ function getSoldOutImage(gi, soldout_settings) {
   }
     
   if (imageSrc && !imageSrc.startsWith('./') && !imageSrc.startsWith('/') && !imageSrc.startsWith('http') && !imageSrc.startsWith('data:')) {
-      imageSrc = `./assets/soldout/${imageSrc}`;
+      imageSrc = `./assets/soldout_images/${imageSrc}`;
   }
 
   return imageSrc;
