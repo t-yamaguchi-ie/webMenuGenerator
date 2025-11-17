@@ -123,6 +123,7 @@ _CSS_TILE = dedent(
       background: transparent;
       border: none;
       overflow: hidden;
+      pointer-events: none;
     }
     """
 ).strip()
@@ -133,6 +134,7 @@ _CSS_TILE_INNER = dedent(
       position: relative;
       width: 100%;
       height: 100%;
+      pointer-events: none;
     }
     """
 ).strip()
@@ -200,6 +202,7 @@ _CSS_CELL_BOX = dedent(
       border: none;
       background: transparent;
       box-sizing: border-box;
+      pointer-events: auto;
     }
     """
 ).strip()
@@ -458,9 +461,17 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType, s
       soldoutLayer.style.display = "none";
     }
     
-    const soldOutFlag = soldOutData.get(gi.product_code);
-    soldoutImg.style.width = (soldOutFlag === 4) ? "100%" : "auto";
-    soldoutImg.style.height = (soldOutFlag === 4) ? "100%" : "auto";
+    // 整列せずに非表示にしたい場合は、画像を使って全面を覆う形で隠します
+    if (layoutType === 'recommended' || gi.osusume) {
+      tile.classList.add('tile--recommended');
+      if (soldOutState === "1"){
+        soldoutImg.style.width = "100%";
+        soldoutImg.style.height = "100%";
+      } else {
+        soldoutImg.style.width = "auto";
+        soldoutImg.style.height = "auto";
+      }
+    }
     
     inner.appendChild(soldoutLayer);
 
