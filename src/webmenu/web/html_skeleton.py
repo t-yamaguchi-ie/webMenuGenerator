@@ -150,6 +150,7 @@ _CSS_TILE_IMAGE = dedent(
       background: #ececec;
       opacity: 0;
       transition: opacity 0.3s ease;
+      pointer-events: auto;
     }
     .tile-inner img.is-loaded {
       opacity: 1;
