@@ -244,10 +244,10 @@ const ABS_COLS = 40;
 const ABS_ROWS = 20;
 const cache = { products: null, categories: null, cells: new Map(), soldout_settings: null };
 
-<!-- 現在の言語設定を維持する -->
+// 現在の言語設定を維持する
 let currentLangPath = "default";
 
-<!-- 品切れ情報を維持する -->
+// 品切れ情報を維持する
 let soldOutData = new Map();
 
 async function fetchJson(path) {
@@ -288,7 +288,7 @@ async function ensureCells(path) {
   return data;
 }
 
-<!-- 品切れ設定情報を取得する -->
+// 品切れ設定情報を取得する
 async function ensureSoldoutSettings() {
   if (cache.soldout_settings) {
     return cache.soldout_settings;
@@ -351,7 +351,7 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType, s
     // 表示位置を決定
     const placeInfo = items[renderIndex];
     
-    <!-- 品切れ整列機能 -->
+    // 品切れ整列機能
     const soldOutState = getSoldOutState(gi, soldout_settings);
     // gi.osusume が存在しない、またはおすすめフレーム非表示、または品切れの場合は非表示対象
     const isSortTarget = (
@@ -401,7 +401,7 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType, s
     inner.className = 'tile-inner';
     tile.appendChild(inner);
    
-    <!--  画像を生成 -->
+    // 画像を生成
     let imageSrc = getMultiLangImage(gi, product);
     if (imageSrc) {
       const img = document.createElement('img');
@@ -418,14 +418,14 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType, s
         img.addEventListener('error', markLoaded, { once: true });
       }
       
-      <!--  クリックイベントを追加 -->
+      // クリックイベントを追加
       const link = document.createElement('a');
       link.href = `a-menu://webAddOrder?data=${encodeURIComponent(JSON.stringify(gi))}`;
       link.appendChild(img);
       inner.appendChild(link);
     }
     
-    <!--  品切れ画像表示 -->
+    // 品切れ画像表示
     const soldoutLayer = document.createElement('div');
     soldoutLayer.className = 'soldout-layer';
     soldoutLayer.dataset.code = gi.product_code;
@@ -479,7 +479,8 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType, s
         cellDiv.style.top = `${(cy - baseY) * layout.scaleY}px`;
         cellDiv.style.width = `${layout.scaleX}px`;
         cellDiv.style.height = `${layout.scaleY}px`;
-        <!--  クリックイベントを追加 -->
+        
+        // クリックイベントを追加
         const link = document.createElement('a');
         link.href = `a-menu://webAddOrder?data=${encodeURIComponent(JSON.stringify(gi))}`;
         link.appendChild(cellDiv);
@@ -585,7 +586,7 @@ function handleSelectionChange(cats, initialLoad=false) {
   }
 }
 
-<!--大分類の切り替え -->
+// 大分類の切り替え
 function changeLMenu(lValue) {
     var select = document.getElementById('lSelect');
     select.value = `L${String(lValue).padStart(2, '0')}`; 
@@ -593,7 +594,7 @@ function changeLMenu(lValue) {
     return true;
 }
 
-<!--中分類の切り替え -->
+// 中分類の切り替え
 function changeMMenu(lValue, mValue) {
     changeLMenu(lValue);
     
@@ -604,13 +605,13 @@ function changeMMenu(lValue, mValue) {
     return true;
 }
 
-<!-- 多言語情報を取得する -->
+// 多言語情報を取得する
 function receiveLangMsg(langPath) {
     currentLangPath = langPath || "default";
     refreshAllImages();
 }
 
-<!-- 多言語対応の画像パスを取得する -->
+// 多言語対応の画像パスを取得する
 function getMultiLangImage(gi,product) {
     let imageSrc = '';
 
@@ -633,7 +634,7 @@ function getMultiLangImage(gi,product) {
     return imageSrc;
 }
 
-<!-- 商品画像を言語に合わせて更新する -->
+// 商品画像を言語に合わせて更新する
 async function refreshAllImages() {
     const sid = getSelectedSmallId();
     if (!sid) {
@@ -660,7 +661,7 @@ async function refreshAllImages() {
     });
 }
 
-<!-- 品切れ情報を取得する -->
+// 品切れ情報を取得する
 async function receiveSoldOutMsg(soldoutList) {
   let data = [];
   try {
@@ -682,7 +683,7 @@ async function receiveSoldOutMsg(soldoutList) {
 }
 
 
-<!-- 現在画面表示を更新する -->
+// 現在画面表示を更新する
 async function refreshPage(cats) {
   try {
     const lSelect = document.getElementById('lSelect');
@@ -728,14 +729,14 @@ async function refreshPage(cats) {
   }
 }
 
-<!-- 品切れ状態を取得する -->
+// 品切れ状態を取得する
 function getSoldOutState(gi, soldout_settings) {
   if (!soldOutData || !gi || !gi.product_code) return 0;
   const soldOutFlag = soldOutData.get(String(gi.product_code));
   return soldout_settings?.sort_soldout_state?.[soldOutFlag] || 0;
 }
 
-<!-- 品切れ対応の画像パスを取得する -->
+// 品切れ対応の画像パスを取得する
 function getSoldOutImage(gi, soldout_settings) {
   let imageSrc = '';
 
