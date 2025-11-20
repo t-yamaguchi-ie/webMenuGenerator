@@ -1,10 +1,11 @@
 from ..core.ids import page_relpath, small_id
 from ..parsers import menudb_reader as mreader
+from typing import List, Dict, Tuple
 
 ABS_COLS = 40
 ABS_ROWS = 20
 
-_FIXED_LAYOUT_PRESETS: dict[int, tuple[int, int]] = {
+_FIXED_LAYOUT_PRESETS: Dict[int, Tuple[int, int]] = {
     1: (1, 1),
     2: (2, 1),
     3: (3, 1),
@@ -18,7 +19,7 @@ _FIXED_LAYOUT_PRESETS: dict[int, tuple[int, int]] = {
 }
 
 
-def _split_dimension(total: int, parts: int) -> list[int]:
+def _split_dimension(total: int, parts: int) -> List[int]:
     if parts <= 0:
         return []
     base = total // parts
@@ -32,7 +33,7 @@ def _split_dimension(total: int, parts: int) -> list[int]:
     return spans
 
 
-def _expand_cells(cell: list[int], span: list[int]) -> list[tuple[int, int]]:
+def _expand_cells(cell: List[int], span: List[int]) -> List[Tuple[int, int]]:
     x0, y0 = cell
     width, height = span
     coords = []
@@ -60,7 +61,7 @@ def _is_visible_flag(value) -> bool:
     return True
 
 
-def _build_fixed_layout(entry: dict, info_by_code: dict[str, dict]) -> tuple[list[dict], dict]:
+def _build_fixed_layout(entry: Dict, info_by_code: Dict[str, Dict]) -> Tuple[List[Dict], Dict]:
     layout_id = entry.get("layout")
     if layout_id not in _FIXED_LAYOUT_PRESETS:
         return [], {}
@@ -89,8 +90,8 @@ def _build_fixed_layout(entry: dict, info_by_code: dict[str, dict]) -> tuple[lis
     multi_lang_images = entry.get("multi_lang_images") or {}
     slots = entry.get("frame_slots") or []
 
-    items: list[dict] = []
-    cells_map: dict[str, list[tuple[int, int]]] = {}
+    items: List[Dict] = []
+    cells_map: Dict[str, List[Tuple[int, int]]] = {}
     for idx, slot in enumerate(slots):
         if idx >= len(plan) or len(items) >= total_positions:
             break
@@ -131,7 +132,7 @@ def _build_fixed_layout(entry: dict, info_by_code: dict[str, dict]) -> tuple[lis
     return items, cells_map
 
 
-def _build_iteminfo_map(menudb: dict):
+def _build_iteminfo_map(menudb: Dict):
     meta = menudb.get("meta", {})
     base = meta.get("base")
     stride = meta.get("stride", mreader.ITEM_INFORMATION_SIZE)
@@ -172,7 +173,7 @@ def make_small_pages(menudb, osusume, ini_bundle, schema_version="0.1"):
     pages = {}
     cell_files = {}
 
-    def attach_cells(sid: str, mapping: dict, items: list):
+    def attach_cells(sid: str, mapping: Dict, items: List):
         if not mapping:
             for item in items:
                 item["cells_path"] = ""

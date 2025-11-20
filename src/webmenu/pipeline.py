@@ -23,6 +23,7 @@ from .web.html_skeleton import write_index_html
 from .web.validate import validate_all
 from .dumpers.assets_exporter import export_assets
 from .dumpers.assets_exporter import export_soldout_assets
+from typing import Set
 
 ASSET_PREFIX_FREE = "free_images/"
 
@@ -41,8 +42,8 @@ def _normalize_asset_path(name: str) -> str:
 # ------------------------------------------------------------
 # small_pages 内の必要アセットを収集
 # ------------------------------------------------------------
-def collect_required_assets(small_pages: dict) -> set[str]:
-    assets: set[str] = set()
+def collect_required_assets(small_pages: dict) -> Set[str]:
+    assets: Set[str] = set()
     for payload in small_pages.values():
         if not isinstance(payload, dict):
             continue

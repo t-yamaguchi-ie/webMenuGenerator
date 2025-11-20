@@ -1,6 +1,7 @@
 import os
 import csv
 import re
+from typing import List, Dict
 
 IMAGE_EXTS = (".jpg", ".jpeg", ".png")
 FRAME_INDEX_RE = re.compile(r"(\d{2})$")
@@ -9,7 +10,7 @@ FIXED_LAYOUT_IDS = {1, 2, 3, 4, 6, 8, 9, 10, 12, 24}
 
 def _read_frameinf(path: str):
     frames_by_section = {}
-    layout_meta: dict[str, str] = {}
+    layout_meta: Dict[str, str] = {}
     if not os.path.isfile(path):
         return {}, layout_meta, []
 
@@ -68,8 +69,8 @@ def _read_frameinf(path: str):
 
 
 def _scan_images(entry_dir: str, l_name: str, m_name: str, v_name: str):
-    frame_images: dict[str, dict[int, str]] = {}
-    other_images: list[str] = []
+    frame_images: Dict[str, Dict[int, str]] = {}
+    other_images: List[str] = []
     
     # ディレクトリが存在しない場合は空を返す
     if not os.path.isdir(entry_dir):
@@ -119,7 +120,7 @@ def _scan_images(entry_dir: str, l_name: str, m_name: str, v_name: str):
     return frame_images, other_images
 
 
-def _read_itemcells(path: str) -> dict:
+def _read_itemcells(path: str) -> Dict:
     cells = {}
     if not os.path.isfile(path):
         return cells
@@ -148,7 +149,7 @@ def _read_itemcells(path: str) -> dict:
     return cells
 
 
-def read_osusume(root: str) -> dict:
+def read_osusume(root: str) -> Dict:
     base = os.path.join(root, "smenu")
     entries = []
     by_key = {}
