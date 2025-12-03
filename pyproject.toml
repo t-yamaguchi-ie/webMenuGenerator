@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64", "wheel"]
+requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,10 +7,10 @@ name = "webmenu-generator"
 version = "0.1.0"
 description = "Legacy menu data → web content converter (PoC)"
 authors = [{name="Your Team", email="dev@example.com"}]
-requires-python = ">=3.10"
+requires-python = ">=3.8.0, <3.9"
 dependencies = [
-    "pandas>=2.0.0",
-    "openpyxl>=3.1.0"
+    "pandas>=1.5.3,<2.0",
+    "openpyxl>=3.0.10,<3.1"
 ]
 
 [project.scripts]
