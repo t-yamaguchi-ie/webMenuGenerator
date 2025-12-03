@@ -28,8 +28,12 @@ def parse_ini_text(text:str):
 def load_all_ini(config_dir:str):
     bundle = {}
     pattern = os.path.join(config_dir, "*.ini")
+    
+    language_ini_path = os.path.join(config_dir, "language.ini")
+    encoding = "utf-8" if os.path.exists(language_ini_path) else "shift_jis"
+    
     for path in glob.glob(pattern):
-        with open(path, "r", encoding="shift_jis", errors="ignore") as f:
+        with open(path, "r", encoding=encoding, errors="ignore") as f:
             text = f.read()
         bundle[os.path.basename(path)] = parse_ini_text(text)
     return bundle
