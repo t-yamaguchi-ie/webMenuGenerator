@@ -980,6 +980,15 @@ function adjustTextSizeAndTruncateHtml(el, text, maxAllowedWidth) {
   el.innerText = finalText;
 }
 
+// キッチン端末 品切れ情報をクリアする
+function receiveClearKtShinagireMsg(flag) {
+  if (flag === true) {
+    isKitchenMenuMode = false;
+    ktShinagireData = new Map(); 
+    ktShinagireTmpData = new Map();
+  }
+}
+
 (async () => {
   try {
     const cats = await ensureCategories();
