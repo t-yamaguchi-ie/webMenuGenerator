@@ -158,6 +158,47 @@ _CSS_TILE_IMAGE = dedent(
     """
 ).strip()
 
+_CSS_KT_SOLDOUT_TEXT = dedent(
+    """
+    .tile-inner div.kt-soldout-text {
+      position: absolute;
+      z-index: 20;
+      display: none;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      
+      background-color: #FFFF00;
+      border: 1px solid #000000;
+      padding: 2px;
+      border-radius: 1px;
+      
+      font-size: 26px;
+      font-weight: bold;
+      text-align: center;
+      max-width: 100%;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    """
+).strip()
+
+_CSS_SOLDOUT_RED = dedent(
+    """
+    .tile-inner div.soldout-red {
+      color: red;
+    }
+    """
+).strip()
+
+_CSS_SOLDOUT_BLACK = dedent(
+    """
+    .tile-inner div.soldout-black {
+      color: black;
+    }
+    """
+).strip()
+
 _CSS_SOLDOUT_LAYER = dedent(
     """
     .tile-inner div.soldout-layer {
@@ -251,8 +292,16 @@ const cache = { products: null, categories: null, cells: new Map(), soldout_sett
 // 現在の言語設定を維持する
 let currentLangPath = "default";
 
-// 品切れ情報を維持する
+// テーブル端末 品切れ情報を維持する
 let soldOutData = new Map();
+
+// キッチン端末 品切れ情報を維持する
+let ktShinagireData = new Map();
+let ktShinagireTmpData = new Map();
+let newState = 0;
+
+// キッチンメニューモードフラグ
+let isKitchenMenuMode = false;
 
 async function fetchJson(path) {
   const res = await fetch(path);
@@ -355,26 +404,31 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType, s
     // 表示位置を決定
     const placeInfo = items[renderIndex];
     
-    // 品切れ整列機能
-    const soldOutState = getSoldOutState(gi, soldout_settings);
-    // gi.osusume が存在しない、またはおすすめフレーム非表示、または品切れの場合は非表示対象
-    const isSortTarget = (
-      !gi.osusume || 
-      (soldout_settings?.sort_hide_frame === "1" && gi.osusume.show === "0") ||
-      soldOutState === "1"
-    );
+    if (!isKitchenMenuMode) {
+      // 品切れ整列機能
+      const soldOutState = getSoldOutState(gi, soldout_settings);
+      // gi.osusume が存在しない、またはおすすめフレーム非表示、または品切れの場合は非表示対象
+      const isSortTarget = (
+        !gi.osusume || 
+        (soldout_settings?.sort_hide_frame === "1" && gi.osusume.show === "0") ||
+        soldOutState === "1"
+      );
       
-    // 並べ替えが有効な場合のみ前詰め処理
-    if (soldout_settings?.use_item_sort === "1") {
-      if (!isSortTarget) {
-        // 非表示でない場合はレンダリングインデックスを使う
-        renderIndex++;
+      // 並べ替えが有効な場合のみ前詰め処理
+      if (soldout_settings?.use_item_sort === "1") {
+        if (!isSortTarget) {
+          // 非表示でない場合はレンダリングインデックスを使う
+          renderIndex++;
+        } else {
+          // 非表示の場合はスキップ
+          continue;
+        }
       } else {
-        // 非表示の場合はスキップ
-        continue;
+        // 並べ替え無効の場合は元のインデックスを使用
+        renderIndex = i + 1;
       }
     } else {
-      // 並べ替え無効の場合は元のインデックスを使用
+      // 元のインデックスを使用
       renderIndex = i + 1;
     }
     
@@ -426,55 +480,109 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType, s
       const link = document.createElement('a');
       link.href = `a-menu://webAddOrder?data=${encodeURIComponent(JSON.stringify(gi))}`;
       link.appendChild(img);
+      
+      // キッチン端末用 品切れ状態を変更する
+      if (isKitchenMenuMode) {
+        link.addEventListener('click', e => {
+          const code = gi.product_code;
+          const shinagireFlag = getShinagireFlag(gi, soldout_settings);
+          const el = document.querySelector(`.kt-soldout-text[data-code="${code}"]`);
+          if (!el) return;
+          
+          const applyView = (state, isRed) => {
+            const text = getKtShinagireText(state, soldout_settings);
+            adjustTextSizeAndTruncateHtml(el, text, width);
+            el.classList.remove('soldout-red', 'soldout-black');
+            el.classList.add(isRed ? 'soldout-red' : 'soldout-black');
+            el.style.display = state === 0 ? 'none' : 'block';
+          };
+          
+          if (shinagireFlag === 0) {
+            if (newState === -1 || newState === 0) return;
+             ktShinagireTmpData.set(code, newState);
+             applyView(newState, true);
+          } else {
+            if (newState === shinagireFlag) {
+              const oldFlag = ktShinagireData.get(code) || 0;
+              ktShinagireTmpData.set(code, oldFlag);
+              applyView(oldFlag, false);
+            } else {
+              ktShinagireTmpData.set(code, newState);
+              applyView(newState, true);
+            }
+          }
+          console.log('shinagire updated:', code, shinagireFlag, '→', ktShinagireTmpData.get(code));
+        });
+      }
+      
       inner.appendChild(link);
     }
     
-    // 品切れ画像表示
-    const soldoutLayer = document.createElement('div');
-    soldoutLayer.className = 'soldout-layer';
-    soldoutLayer.dataset.code = gi.product_code;
-    soldoutLayer.style.display = 'none';
-    
-    const soldoutImg  = document.createElement('img');
-    soldoutImg.className = 'soldout-img';
-    soldoutImg.alt = 'Sold Out';
-    soldoutImg.dataset.code = gi.product_code;
-    soldoutImg.style.display = 'none';
-    
-    soldoutLayer.appendChild(soldoutImg);
+    if (isKitchenMenuMode) {
+      // キッチン端末 品切れマック表示処理
+      const shinagireFlag = getShinagireFlag(gi, soldout_settings);
+      const shinagireText = getKtShinagireText(shinagireFlag, soldout_settings);
+      const isNew = !ktShinagireData.has(gi.product_code) || ktShinagireData.get(gi.product_code) !== shinagireFlag;
       
-    let soldOutImgSrc = getSoldOutImage(gi, soldout_settings);
-    
-    if (soldOutImgSrc) {
-      soldoutImg.src = soldOutImgSrc;
-      soldoutImg.style.display = "";
-     
-      soldoutLayer.style.display = "flex";
-      soldoutLayer.style.pointerEvents = "auto";
-      soldoutLayer.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
+      const ktSoldoutText = document.createElement('div');
+      ktSoldoutText.className = 'kt-soldout-text' + (isNew ? ' soldout-red' : ' soldout-black');
+      ktSoldoutText.dataset.code = gi.product_code;
+      inner.appendChild(ktSoldoutText);
+      
+      ktSoldoutText.style.display = shinagireFlag !== 0 ? "block" : "none";
+      
+      requestAnimationFrame(() => {
+        adjustTextSizeAndTruncateHtml(ktSoldoutText, shinagireText, width);
       });
     } else {
-      soldoutImg.style.display = "none";
+      // 品切れ画像表示
+      const soldoutLayer = document.createElement('div');
+      soldoutLayer.className = 'soldout-layer';
+      soldoutLayer.dataset.code = gi.product_code;
+      soldoutLayer.style.display = 'none';
+    
+      const soldoutImg  = document.createElement('img');
+      soldoutImg.className = 'soldout-img';
+      soldoutImg.alt = 'Sold Out';
+      soldoutImg.dataset.code = gi.product_code;
+      soldoutImg.style.display = 'none';
+    
+      soldoutLayer.appendChild(soldoutImg);
       
-      soldoutLayer.style.pointerEvents = "none";
-      soldoutLayer.style.display = "none";
-    }
+      let soldOutImgSrc = getSoldOutImage(gi, soldout_settings);
     
-    // 整列せずに非表示にしたい場合は、画像を使って全面を覆う形で隠します
-    if (layoutType === 'recommended' || gi.osusume) {
-      tile.classList.add('tile--recommended');
-      if (soldOutState === "1"){
-        soldoutImg.style.width = "100%";
-        soldoutImg.style.height = "100%";
+      if (soldOutImgSrc) {
+        soldoutImg.src = soldOutImgSrc;
+        soldoutImg.style.display = "";
+     
+        soldoutLayer.style.display = "flex";
+        soldoutLayer.style.pointerEvents = "auto";
+        soldoutLayer.addEventListener('click', e => {
+          e.preventDefault();
+          e.stopPropagation();
+        });
       } else {
-        soldoutImg.style.width = "auto";
-        soldoutImg.style.height = "auto";
+        soldoutImg.style.display = "none";
+      
+        soldoutLayer.style.pointerEvents = "none";
+        soldoutLayer.style.display = "none";
       }
-    }
     
-    inner.appendChild(soldoutLayer);
+      // 整列せずに非表示にしたい場合は、画像を使って全面を覆う形で隠します
+      if (layoutType === 'recommended' || gi.osusume) {
+        tile.classList.add('tile--recommended');
+        const soldOutState = getSoldOutState(gi, soldout_settings);
+        if (soldOutState === "1"){
+          soldoutImg.style.width = "100%";
+          soldoutImg.style.height = "100%";
+        } else {
+          soldoutImg.style.width = "auto";
+          soldoutImg.style.height = "auto";
+        }
+      }
+    
+      inner.appendChild(soldoutLayer);
+    }
 
     const cellsPath = gi.cells_path;
     const cellEntries = cellsPath ? (cellsData[cellsPath]?.cells || {}) : {};
@@ -673,7 +781,7 @@ async function refreshAllImages() {
     });
 }
 
-// 品切れ情報を取得する
+// テーブル端末/スタック端末  品切れ情報を取得する
 async function receiveSoldOutMsg(soldoutList) {
   let data = [];
   try {
@@ -688,6 +796,13 @@ async function receiveSoldOutMsg(soldoutList) {
   soldOutData = new Map(
     data.map(item => [String(item.item_code), item.sold_out_flag])
   );
+  
+  // キッチンメニューモードを無効化
+  isKitchenMenuMode = false;
+  
+  // キッチン端末の品切れ情報をクリア
+  ktShinagireData = new Map();
+  ktShinagireTmpData = new Map();
 
   // カテゴリ情報を取得して refreshPage を呼び出す
   const cats = await ensureCategories();
@@ -707,21 +822,21 @@ async function refreshPage(cats) {
     const currentM = mSelect.value;
     const currentS = sSelect.value;
 
-    // L（大カテゴリ）のドロップダウンを再構築
+    // 大分類インデックスのドロップダウンを再構築
     const lOptions = (cats.tree || []).map(l => ({ value: l.id, label: l.label }));
     populateSelect(lSelect, lOptions);
 
-    // L の選択を復元
+    // 大分類インデックスの選択を復元
     if (lOptions.some(o => o.value === currentL)) {
       lSelect.value = currentL;
     } else {
       lSelect.value = lOptions[0]?.value || '';
     }
 
-    // M/S（中カテゴリ/小カテゴリ）下位ドロップダウンを更新
+    // 中分類/小分類の下位ドロップダウンを更新
     handleSelectionChange(cats, true);
 
-    // M/S の選択を復元
+    // 中分類/小分類の選択を復元
     const lNode = (cats.tree || []).find(l => l.id === lSelect.value);
     const mNode = (lNode?.children || []).find(m => m.id === currentM);
     if (mNode) {
@@ -741,14 +856,14 @@ async function refreshPage(cats) {
   }
 }
 
-// 品切れ状態を取得する
+// テーブル端末/スタック端末 品切れ状態を取得する
 function getSoldOutState(gi, soldout_settings) {
   if (!soldOutData || !gi || !gi.product_code) return 0;
   const soldOutFlag = soldOutData.get(String(gi.product_code));
   return soldout_settings?.sort_soldout_state?.[soldOutFlag] || 0;
 }
 
-// 品切れ対応の画像パスを取得する
+// テーブル端末/スタック端末 品切れ対応の画像パスを取得する
 function getSoldOutImage(gi, soldout_settings) {
   let imageSrc = '';
 
@@ -769,6 +884,100 @@ function getSoldOutImage(gi, soldout_settings) {
   }
 
   return imageSrc;
+}
+
+// キッチン端末 品切れ情報を取得する
+async function receiveKtShinagireMsg(ktShinagireInfo) {
+  let data = [];
+  try {
+    if (typeof ktShinagireInfo === "object" && ktShinagireInfo !== null) {
+      data = Array.isArray(ktShinagireInfo.shinagire)
+        ? ktShinagireInfo.shinagire
+        : [];
+    }
+  } catch (err) {
+    console.error("ktShinagire の解析に失敗しました:", err);
+    data = [];
+  }
+
+  // ktShinagireData を Map に変換（全局変数として使用する場合）
+  ktShinagireData = new Map(
+    data.map(item => [String(item.item_code), item.sold_out_flag])
+  );
+  
+  ktShinagireTmpData = new Map(
+    data.map(item => [String(item.item_code), item.sold_out_flag])
+  );
+  
+  newState = ktShinagireInfo.new_state || 0;
+  
+  // キッチンメニューモードを有効化
+  isKitchenMenuMode = true;
+  
+  // テーブル端末の品切れ情報をクリア
+  soldOutData = new Map();
+  currentLangPath = "default";
+
+  // カテゴリ情報を取得して refreshPage を呼び出す
+  const cats = await ensureCategories();
+  refreshPage(cats);
+}
+
+// キッチン端末 品切れフラグを取得する
+function getShinagireFlag(gi, soldout_settings) {
+  if (!ktShinagireTmpData || !gi || !gi.product_code) return 0;
+  const shinagireFlag = ktShinagireTmpData.get(String(gi.product_code));
+  return shinagireFlag || 0;
+}
+
+// キッチン端末 品切れ文字を取得する
+function getKtShinagireText(state, soldout_settings) {
+  if (state === -1) return "品切れ解除";
+  if (state === 0) return " ";
+  const key = String(state);
+  const value = soldout_settings?.kt_soldout_state?.[key];
+  const shinagireDefaultTextList = ["品切れ", "状態2", "状態3", "状態4"];
+  return value ?? shinagireDefaultTextList[state - 1] ?? "";
+}
+
+// テキストサイズを調整し、HTML要素内でテキストを切り詰める関数
+function adjustTextSizeAndTruncateHtml(el, text, maxAllowedWidth) {
+  if (!el) return;
+  
+  const textSizes = [
+    { key: 'KB', size: 26 }, // OVERSIZED
+    { key: 'LB', size: 22 }, // LARGE
+    { key: 'MB', size: 18 }, // MIDDLE
+    { key: 'SB', size: 14 }  // SMALL
+  ];
+
+  const maxCharacters = 15;
+  let truncatedText = text;
+  if (truncatedText.length > maxCharacters) {
+    truncatedText = truncatedText.slice(0, maxCharacters);
+  }
+
+  for (const item of textSizes) {
+    el.style.fontSize = item.size + 'px';
+    el.innerText = truncatedText;
+
+    if (el.scrollWidth <= maxAllowedWidth) {
+      return;
+    }
+  }
+
+  let finalText = '';
+  for (let i = 0; i < truncatedText.length; i++) {
+    const testText = truncatedText.slice(0, i + 1);
+    el.innerText = testText;
+
+    if (el.scrollWidth > maxAllowedWidth) {
+      finalText = truncatedText.slice(0, i);
+      break;
+    }
+  }
+
+  el.innerText = finalText;
 }
 
 (async () => {
@@ -821,6 +1030,9 @@ def _build_css(show_dev_ui: bool) -> str:
         _CSS_TILE,
         _CSS_TILE_INNER,
         _CSS_TILE_IMAGE,
+        _CSS_KT_SOLDOUT_TEXT,
+        _CSS_SOLDOUT_RED,
+        _CSS_SOLDOUT_BLACK,
         _CSS_SOLDOUT_LAYER,
         _CSS_SOLDOUT,
         _CSS_CELL_LAYER,
