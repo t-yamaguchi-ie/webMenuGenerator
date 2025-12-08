@@ -303,6 +303,9 @@ let newState = 0;
 // キッチンメニューモードフラグ
 let isKitchenMenuMode = false;
 
+// スタッフマイナスオーダーフラグ
+let isMinusOrder = false
+
 async function fetchJson(path) {
   const res = await fetch(path);
   if (!res.ok) {
@@ -404,7 +407,7 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType, s
     // 表示位置を決定
     const placeInfo = items[renderIndex];
     
-    if (!isKitchenMenuMode) {
+    if (!isKitchenMenuMode && !isMinusOrder) {
       // 品切れ整列機能
       const soldOutState = getSoldOutState(gi, soldout_settings);
       // gi.osusume が存在しない、またはおすすめフレーム非表示、または品切れの場合は非表示対象
@@ -534,7 +537,7 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType, s
       requestAnimationFrame(() => {
         adjustTextSizeAndTruncateHtml(ktSoldoutText, shinagireText, width);
       });
-    } else {
+    } else if (!isMinusOrder) {
       // 品切れ画像表示
       const soldoutLayer = document.createElement('div');
       soldoutLayer.className = 'soldout-layer';
@@ -989,6 +992,11 @@ function receiveClearKtShinagireMsg(flag) {
   }
 }
 
+// スタッフ端末 マイナスオーダー状態を確認する
+function receiveMinusOrderMsg(flag) {
+  isMinusOrder = Boolean(flag)
+}
+
 (async () => {
   try {
     const cats = await ensureCategories();
@@ -1016,6 +1024,12 @@ function receiveClearKtShinagireMsg(flag) {
 
     if (getSelectedSmallId()) {
       run();
+    }
+    
+    // 画面の描画がすべて完了した後に Android 側へ通知する
+    if (window.AndroidInterface && window.AndroidInterface.onPageReady) {
+      console.log("onPageReady from run()");
+      window.AndroidInterface.onPageReady();
     }
   } catch (err) {
     console.error('Failed to init selectors', err);

@@ -19,7 +19,7 @@ def make_soldout_json(ini_bundle):
     
     kt_settings = (
         ini_bundle
-        .get("kt.ini", {})
+        .get("menu.ini", {})
         .get("sections", {})
         .get("hm", {})
     )
