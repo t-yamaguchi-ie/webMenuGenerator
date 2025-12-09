@@ -9,6 +9,7 @@
 import os
 import json
 import datetime
+import logging
 
 # 自作モジュール
 from .parsers.ini_loader import load_all_ini
@@ -26,6 +27,37 @@ from .dumpers.assets_exporter import export_soldout_assets
 from typing import Set
 
 ASSET_PREFIX_FREE = "free_images/"
+
+# ------------------------------------------------------------
+# ログ初期化処理
+# ・ログ出力ディレクトリを作成
+# ・ファイル名は「機能名_YYYYMMDD.log」形式
+# ・コンソール ＋ ファイルの両方へ出力
+# ------------------------------------------------------------
+def setup_logger(log_dir="D:/WebMenu/logs", name="webmenu_generate"):
+    os.makedirs(log_dir, exist_ok=True)
+
+    today = datetime.datetime.now().strftime("%Y%m%d")
+    log_path = os.path.join(log_dir, f"{name}_{today}.log")
+
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+
+    if not logger.handlers:
+        fmt = logging.Formatter(
+            "%(asctime)s [%(levelname)s] %(filename)s:%(lineno)d - %(message)s"
+        )
+
+        fh = logging.FileHandler(log_path, encoding="utf-8")
+        fh.setFormatter(fmt)
+
+        ch = logging.StreamHandler()
+        ch.setFormatter(fmt)
+
+        logger.addHandler(fh)
+        logger.addHandler(ch)
+
+    return logger
 
 # ------------------------------------------------------------
 # アセットパス正規化
@@ -78,68 +110,90 @@ def collect_required_assets(small_pages: dict) -> Set[str]:
 # args: コマンドライン引数オブジェクト
 # ------------------------------------------------------------
 def run_pipeline(args):
-    # ★ここから下、関数内に「import json, os」は置かない！
-    ref = args.ref or datetime.datetime.now().strftime("%Y%m%d-%H%M%S-000000")
-    out_root = os.path.join(args.out, "builds", ref)
-    raw_dump_dir = os.path.join(out_root, "raw_dump")
-    web_dir = os.path.join(out_root, "web_content")
+    logger = setup_logger()
+    logger.info("WebMenuGenerate 処理を開始します。")
+    
+    try:
+        # ★ここから下、関数内に「import json, os」は置かない！
+        ref = args.ref or datetime.datetime.now().strftime("%Y%m%d-%H%M%S-000000")
+        out_root = os.path.join(args.out, "builds", ref)
+        raw_dump_dir = os.path.join(out_root, "raw_dump")
+        web_dir = os.path.join(out_root, "web_content")
 
-    os.makedirs(raw_dump_dir, exist_ok=True)
-    os.makedirs(web_dir, exist_ok=True)
+        os.makedirs(raw_dump_dir, exist_ok=True)
+        os.makedirs(web_dir, exist_ok=True)
+    
+        # Parse legacy
+        logger.info("設定ファイルの読み込みを開始します。")
+        ini_bundle = load_all_ini(os.path.join(args.free, "config"))
+        menudb_path = os.path.join(args.free, "datas", "menudb.dat")
+        menudb = read_menudb(menudb_path)
+        osusume = read_osusume(args.osusume)
 
-    # Parse legacy
-    ini_bundle = load_all_ini(os.path.join(args.free, "config"))
-    menudb_path = os.path.join(args.free, "datas", "menudb.dat")
-    menudb = read_menudb(menudb_path)
-    osusume = read_osusume(args.osusume)
-
-    # Raw dump
-    write_raw_dump(raw_dump_dir, ini_bundle, menudb, osusume)
-
-    # Mapping to web_content
-    products = make_products(menudb, ini_bundle, schema_version=args.schema_version)
-    small_pages, cell_files = make_small_pages(
-        menudb,
-        osusume,
-        ini_bundle,
-        schema_version=args.schema_version
-    )
-    categories = make_categories(menudb, ini_bundle, small_pages, schema_version=args.schema_version)
-    soldout = make_soldout_json(ini_bundle)
-
-    # Emit web_content
-    with open(os.path.join(web_dir, "menudb.json"), "w", encoding="utf-8") as f:
-        json.dump(products, f, ensure_ascii=False, indent=2)
-    with open(os.path.join(web_dir, "categories.json"), "w", encoding="utf-8") as f:
-        json.dump(categories, f, ensure_ascii=False, indent=2)
-    with open(os.path.join(web_dir, "soldout.json"), "w", encoding="utf-8") as f:
-        json.dump(soldout, f, ensure_ascii=False, indent=2)
-    for rel_path, payload in small_pages.items():
-        p = os.path.join(web_dir, rel_path)
-        os.makedirs(os.path.dirname(p), exist_ok=True)
-        with open(p, "w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False, indent=2)
-    for rel_path, cells_payload in cell_files.items():
-        p = os.path.join(web_dir, rel_path)
-        os.makedirs(os.path.dirname(p), exist_ok=True)
-        with open(p, "w", encoding="utf-8") as f:
-            json.dump(cells_payload, f, ensure_ascii=False, indent=2)
-
-    required_assets = collect_required_assets(small_pages)
-
-    if not args.skip_assets:
-        export_assets(
-            args.free,
-            args.osusume,
-            os.path.join(web_dir, "assets"),
-            required_assets=required_assets
+        # Raw dump
+        logger.info("Raw dump の出力処理を開始します。")
+        write_raw_dump(raw_dump_dir, ini_bundle, menudb, osusume)
+        
+        # Mapping to web_content
+        logger.info("Web 向け JSON データの生成処理を開始します。")
+        products = make_products(menudb, ini_bundle, schema_version=args.schema_version)
+        small_pages, cell_files = make_small_pages(
+            menudb,
+            osusume,
+            ini_bundle,
+            schema_version=args.schema_version
         )
-        export_soldout_assets(
-            args.free,
-            os.path.join(web_dir, "assets"),
-            soldout
-        )
+        categories = make_categories(menudb, ini_bundle, small_pages, schema_version=args.schema_version)
+        soldout = make_soldout_json(ini_bundle)
+        
+        # Emit web_content
+        logger.info("Web 向け JSON ファイルの出力を開始します。")
+        with open(os.path.join(web_dir, "menudb.json"), "w", encoding="utf-8") as f:
+            json.dump(products, f, ensure_ascii=False, indent=2)
+        with open(os.path.join(web_dir, "categories.json"), "w", encoding="utf-8") as f:
+            json.dump(categories, f, ensure_ascii=False, indent=2)
+        with open(os.path.join(web_dir, "soldout.json"), "w", encoding="utf-8") as f:
+            json.dump(soldout, f, ensure_ascii=False, indent=2)
+        for rel_path, payload in small_pages.items():
+            p = os.path.join(web_dir, rel_path)
+            os.makedirs(os.path.dirname(p), exist_ok=True)
+            with open(p, "w", encoding="utf-8") as f:
+                json.dump(payload, f, ensure_ascii=False, indent=2)
+        for rel_path, cells_payload in cell_files.items():
+            p = os.path.join(web_dir, rel_path)
+            os.makedirs(os.path.dirname(p), exist_ok=True)
+            with open(p, "w", encoding="utf-8") as f:
+                json.dump(cells_payload, f, ensure_ascii=False, indent=2)
 
-    write_index_html(web_dir, show_dev_ui=args.show_dev_ui)
-    validate_all(web_dir)
-    print(f"Done → {out_root}")
+        logger.info("画像素材ファイルの出力処理を開始します。")
+        required_assets = collect_required_assets(small_pages)
+
+        if not args.skip_assets:
+            export_assets(
+                args.free,
+                args.osusume,
+                os.path.join(web_dir, "assets"),
+                required_assets=required_assets
+            )
+            export_soldout_assets(
+                args.free,
+                os.path.join(web_dir, "assets"),
+                soldout
+            )
+
+        logger.info("index.html の生成処理を開始します。")
+        write_index_html(web_dir, show_dev_ui=args.show_dev_ui)
+        validate_all(web_dir)
+    
+        logger.info(f"WebMenuGenerate 処理が正常に完了いたしました。出力先: {out_root}")
+        
+    except Exception as e:
+        logger.error("WebMenuGenerate 処理中にエラーが発生しました。")
+        logger.error("エラー種別: %s", type(e).__name__)
+        logger.error("エラーメッセージ: %s", str(e))
+        logger.error("入力パラメータ: ref=%s, out=%s, free=%s, osusume=%s, schema_version=%s",args.ref, args.out, args.free, args.osusume, args.schema_version)
+        logger.exception("スタックトレース詳細")
+        raise
+
+        
+    
