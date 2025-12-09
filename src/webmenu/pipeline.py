@@ -27,35 +27,50 @@ from .dumpers.assets_exporter import export_soldout_assets
 from typing import Set
 
 ASSET_PREFIX_FREE = "free_images/"
+LOG_SRC_FOLDER = "D:/WebMenu/logs"
+LOG_SRC_NAME = "webmenu_generate"
 
 # ------------------------------------------------------------
-# ログ初期化処理
-# ・ログ出力ディレクトリを作成
-# ・ファイル名は「機能名_YYYYMMDD.log」形式
-# ・コンソール ＋ ファイルの両方へ出力
+# 共通ログ作成処理
+#  ・ファイル + コンソールの両方へ出力
+#  ・ログファイル名：機能名_YYYYMMDD.log
 # ------------------------------------------------------------
-def setup_logger(log_dir="D:/WebMenu/logs", name="webmenu_generate"):
+def setup_logger(
+    log_dir=LOG_SRC_FOLDER,
+    name=LOG_SRC_NAME,
+    level=logging.INFO
+):
     os.makedirs(log_dir, exist_ok=True)
-
     today = datetime.datetime.now().strftime("%Y%m%d")
-    log_path = os.path.join(log_dir, f"{name}_{today}.log")
+    log_file = f"{name}_{today}.log"
+    log_path = os.path.join(log_dir, log_file)
 
     logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(level)
+    logger.propagate = False
+    
+    if logger.handlers:
+        return logger
 
-    if not logger.handlers:
-        fmt = logging.Formatter(
-            "%(asctime)s [%(levelname)s] %(filename)s:%(lineno)d - %(message)s"
-        )
+    file_handler = logging.FileHandler(
+        log_path,
+        encoding="utf-8"
+    )
+    file_handler.setLevel(level)
 
-        fh = logging.FileHandler(log_path, encoding="utf-8")
-        fh.setFormatter(fmt)
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(level)
 
-        ch = logging.StreamHandler()
-        ch.setFormatter(fmt)
+    unified_formatter = logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(filename)s:%(lineno)d - %(message)s",
+        "%Y-%m-%d %H:%M:%S"
+    )
 
-        logger.addHandler(fh)
-        logger.addHandler(ch)
+    file_handler.setFormatter(unified_formatter)
+    console_handler.setFormatter(unified_formatter)
+
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
 
     return logger
 
@@ -110,7 +125,7 @@ def collect_required_assets(small_pages: dict) -> Set[str]:
 # args: コマンドライン引数オブジェクト
 # ------------------------------------------------------------
 def run_pipeline(args):
-    logger = setup_logger()
+    logger = setup_logger(log_dir=LOG_SRC_FOLDER, name=LOG_SRC_NAME)
     logger.info("WebMenuGenerate 処理を開始します。")
     
     try:
