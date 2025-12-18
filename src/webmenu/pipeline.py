@@ -24,55 +24,11 @@ from .web.html_skeleton import write_index_html
 from .web.validate import validate_all
 from .dumpers.assets_exporter import export_assets
 from .dumpers.assets_exporter import export_soldout_assets
+from .utils.logger_util import setup_logger
 from typing import Set
 
 ASSET_PREFIX_FREE = "free_images/"
-LOG_SRC_FOLDER = "D:/WebMenu/logs"
-LOG_SRC_NAME = "webmenu_generate"
-
-# ------------------------------------------------------------
-# 共通ログ作成処理
-#  ・ファイル + コンソールの両方へ出力
-#  ・ログファイル名：機能名_YYYYMMDD.log
-# ------------------------------------------------------------
-def setup_logger(
-    log_dir=LOG_SRC_FOLDER,
-    name=LOG_SRC_NAME,
-    level=logging.INFO
-):
-    os.makedirs(log_dir, exist_ok=True)
-    today = datetime.datetime.now().strftime("%Y%m%d")
-    log_file = f"{name}_{today}.log"
-    log_path = os.path.join(log_dir, log_file)
-
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-    logger.propagate = False
-    
-    if logger.handlers:
-        return logger
-
-    file_handler = logging.FileHandler(
-        log_path,
-        encoding="utf-8"
-    )
-    file_handler.setLevel(level)
-
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(level)
-
-    unified_formatter = logging.Formatter(
-        "%(asctime)s [%(levelname)s] %(filename)s:%(lineno)d - %(message)s",
-        "%Y-%m-%d %H:%M:%S"
-    )
-
-    file_handler.setFormatter(unified_formatter)
-    console_handler.setFormatter(unified_formatter)
-
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
-
-    return logger
+LOG_SRC_NAME = "smenu_watcher"
 
 # ------------------------------------------------------------
 # アセットパス正規化
@@ -125,7 +81,7 @@ def collect_required_assets(small_pages: dict) -> Set[str]:
 # args: コマンドライン引数オブジェクト
 # ------------------------------------------------------------
 def run_pipeline(args):
-    logger = setup_logger(log_dir=LOG_SRC_FOLDER, name=LOG_SRC_NAME)
+    logger = setup_logger(name=LOG_SRC_NAME)
     logger.info("WebMenuGenerate 処理を開始します。")
     
     try:
