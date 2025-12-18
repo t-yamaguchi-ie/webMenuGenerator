@@ -710,22 +710,42 @@ function handleSelectionChange(cats, initialLoad=false) {
 }
 
 // 大分類の切り替え
-function changeLMenu(lValue) {
+function changeLMenu(lValue, fireEvent = true) {
     var select = document.getElementById('lSelect');
     select.value = `L${String(lValue).padStart(2, '0')}`; 
-    select.dispatchEvent(new Event('change', { bubbles: true }));
+    if (fireEvent) {
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
     return true;
 }
 
 // 中分類の切り替え
 function changeMMenu(lValue, mValue) {
-    changeLMenu(lValue);
+    // 大分類は描画だけ変更（イベントは出さない）
+    changeLMenu(lValue, false);    
+    // 大分類変更に依存する中分類のoptionを構築
+    rebuildMOptions(lValue);
     
+    // 中分類の変更と描画
     var select = document.getElementById('mSelect');
     select.value = `M${String(lValue).padStart(2, '0')}${String(mValue).padStart(2, '0')}`; 
     select.dispatchEvent(new Event('change', { bubbles: true }));
  
     return true;
+}
+
+// 中分類変更時、中分類のOption項目を再構築する
+function rebuildMOptions(lValue) {
+    const mSelect = document.getElementById('mSelect');
+    mSelect.innerHTML = '';
+
+    // 中分類１～12生成
+    for (let i = 1; i <= 12; i++) {
+        const opt = document.createElement('option');
+        opt.value = `M${String(lValue).padStart(2, '0')}${String(i).padStart(2, '0')}`;
+        opt.textContent = `M${i}`;
+        mSelect.appendChild(opt);
+    }
 }
 
 // 多言語情報を取得する
