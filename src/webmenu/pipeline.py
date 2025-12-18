@@ -15,6 +15,7 @@ import logging
 from .parsers.ini_loader import load_all_ini
 from .parsers.menudb_reader import read_menudb
 from .parsers.osusume_reader import read_osusume
+from .parsers.osusume_reader import read_osusume_datas
 from .dumpers.raw_dump_writer import write_raw_dump
 from .mapping.to_web_products import make_products
 from .mapping.to_web_categories import make_categories
@@ -144,10 +145,12 @@ def run_pipeline(args):
         menudb_path = os.path.join(args.free, "datas", "menudb.dat")
         menudb = read_menudb(menudb_path)
         osusume = read_osusume(args.osusume)
+        osusume_ini_bundle = load_all_ini(os.path.join(args.osusume, "smenu","menu","datas"))
+        osusume_datas = read_osusume_datas(args.osusume)
 
         # Raw dump
         logger.info("Raw dump の出力処理を開始します。")
-        write_raw_dump(raw_dump_dir, ini_bundle, menudb, osusume)
+        write_raw_dump(raw_dump_dir, web_dir, ini_bundle, menudb, osusume, osusume_ini_bundle, osusume_datas)
         
         # Mapping to web_content
         logger.info("Web 向け JSON データの生成処理を開始します。")
