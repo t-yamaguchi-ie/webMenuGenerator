@@ -10,6 +10,7 @@ import os
 import json
 import datetime
 import logging
+import configparser
 
 # 自作モジュール
 from .parsers.ini_loader import load_all_ini
@@ -28,50 +29,82 @@ from .dumpers.assets_exporter import export_soldout_assets
 from typing import Set
 
 ASSET_PREFIX_FREE = "free_images/"
-LOG_SRC_FOLDER = "D:/WebMenu/logs"
-LOG_SRC_NAME = "webmenu_generate"
 
 # ------------------------------------------------------------
 # 共通ログ作成処理
 #  ・ファイル + コンソールの両方へ出力
 #  ・ログファイル名：機能名_YYYYMMDD.log
 # ------------------------------------------------------------
-def setup_logger(
-    log_dir=LOG_SRC_FOLDER,
-    name=LOG_SRC_NAME,
-    level=logging.INFO
-):
-    os.makedirs(log_dir, exist_ok=True)
+def setup_logger(name: str = "webmenu_generator", level: int = logging.INFO) -> logging.Logger:
+    # --------------------------------------------
+    # 日付文字列取得
+    # --------------------------------------------
     today = datetime.datetime.now().strftime("%Y%m%d")
-    log_file = f"{name}_{today}.log"
-    log_path = os.path.join(log_dir, log_file)
 
+    # --------------------------------------------
+    # ログ出力先ディレクトリ決定
+    # 優先順位:
+    # 1) MIS.INI の [LOG] セクション設定
+    # 2) D:\WebMenu\logs
+    # 3) 上記が利用不可の場合はログ無効
+    # --------------------------------------------
+    log_dir = None
+    ini_path = r"C:\MIS\INI\MIS.INI"
+
+    if os.path.exists(ini_path):
+        try:
+            config = configparser.ConfigParser()
+            config.read(ini_path, encoding="cp932")
+            if config.has_section("LOG"):
+                base = config.get("LOG", "MIS_LOG_FOLDER", fallback=None)
+                if base:
+                    log_dir = os.path.join(base, "WebMenu", "logs")
+        except Exception:
+            log_dir = None
+
+    if log_dir is None and os.path.isdir("D:\\"):
+        log_dir = r"D:\WebMenu\logs"
+
+    # --------------------------------------------
+    # ログファイルパス作成
+    # --------------------------------------------
+    log_file = None
+    if log_dir:
+        os.makedirs(log_dir, exist_ok=True)
+        log_file = os.path.join(log_dir, f"{name}_{today}.log")
+
+    # --------------------------------------------
+    # Logger 作成
+    # --------------------------------------------
     logger = logging.getLogger(name)
     logger.setLevel(level)
-    logger.propagate = False
-    
+    logger.propagate = False  # 上位 Logger へ伝搬しない
+
+    # 既存ハンドラがあれば再利用
     if logger.handlers:
         return logger
 
-    file_handler = logging.FileHandler(
-        log_path,
-        encoding="utf-8"
-    )
-    file_handler.setLevel(level)
-
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(level)
-
-    unified_formatter = logging.Formatter(
+    # フォーマット統一
+    formatter = logging.Formatter(
         "%(asctime)s [%(levelname)s] %(filename)s:%(lineno)d - %(message)s",
         "%Y-%m-%d %H:%M:%S"
     )
 
-    file_handler.setFormatter(unified_formatter)
-    console_handler.setFormatter(unified_formatter)
-
-    logger.addHandler(file_handler)
+    # コンソール出力
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(level)
+    console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
+
+    # ファイル出力
+    if log_file:
+        try:
+            file_handler = logging.FileHandler(log_file, encoding="utf-8")
+            file_handler.setLevel(level)
+            file_handler.setFormatter(formatter)
+            logger.addHandler(file_handler)
+        except Exception as e:
+            logger.warning(f"ログファイル作成に失敗しました: {log_file}. {e}")
 
     return logger
 
@@ -126,7 +159,7 @@ def collect_required_assets(small_pages: dict) -> Set[str]:
 # args: コマンドライン引数オブジェクト
 # ------------------------------------------------------------
 def run_pipeline(args):
-    logger = setup_logger(log_dir=LOG_SRC_FOLDER, name=LOG_SRC_NAME)
+    logger = setup_logger()
     logger.info("WebMenuGenerate 処理を開始します。")
     
     try:
