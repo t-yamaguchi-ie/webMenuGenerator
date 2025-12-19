@@ -153,6 +153,46 @@ def collect_required_assets(small_pages: dict) -> Set[str]:
                     assets.add(path)
     return assets
 
+
+# ------------------------------------------------------------
+# categories 内の必要アセットを収集
+# ------------------------------------------------------------
+def collect_category_assets(categories: dict) -> Set[str]:
+    assets: Set[str] = set()
+
+    for cat in categories.get("tree", []):
+        if not isinstance(cat, dict):
+            continue
+
+        # --- cat レベル ---
+        for key in (
+            "scr_btn_img",
+            "frm_back_img",
+            "frm_off_btn_img",
+            "frm_on_btn_img",
+            "m_frm_back_img",
+        ):
+            img_map = cat.get(key) or {}
+            for path in img_map.values():
+                path = _normalize_asset_path(path)
+                if path:
+                    assets.add(path)
+
+        # --- children レベル ---
+        for item in cat.get("children", []):
+            if not isinstance(item, dict):
+                continue
+
+            for key in ("btn_on_img", "btn_off_img"):
+                img_map = item.get(key) or {}
+                for path in img_map.values():
+                    path = _normalize_asset_path(path)
+                    if path:
+                        assets.add(path)
+
+    return assets
+
+
 # ------------------------------------------------------------
 # パイプライン実行
 # メニュー関連データを読み込んで加工し、Web向けに出力する一連の処理
@@ -194,7 +234,7 @@ def run_pipeline(args):
             ini_bundle,
             schema_version=args.schema_version
         )
-        categories = make_categories(menudb, ini_bundle, small_pages, schema_version=args.schema_version)
+        categories = make_categories(args.free, args.osusume, menudb, ini_bundle, small_pages, schema_version=args.schema_version)
         soldout = make_soldout_json(ini_bundle)
         
         # Emit web_content
@@ -218,6 +258,7 @@ def run_pipeline(args):
 
         logger.info("画像素材ファイルの出力処理を開始します。")
         required_assets = collect_required_assets(small_pages)
+        catrgories_assets = collect_category_assets(categories)
 
         if not args.skip_assets:
             export_assets(
@@ -225,6 +266,12 @@ def run_pipeline(args):
                 args.osusume,
                 os.path.join(web_dir, "assets"),
                 required_assets=required_assets
+            )
+            export_assets(
+                args.free,
+                args.osusume,
+                os.path.join(web_dir, "assets"),
+                required_assets=catrgories_assets
             )
             export_soldout_assets(
                 args.free,

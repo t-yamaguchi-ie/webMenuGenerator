@@ -50,15 +50,26 @@ def export_soldout_assets(free_dir:str,out_assets_dir:str, soldout):
     target_dir = os.path.join(out_assets_dir, "soldout_images")
     os.makedirs(target_dir, exist_ok=True)
     
+    image_files = set()
     
-    def copy_images(d):
-        for key, value in d.items():
+    def is_image_file(value: str) -> bool:
+        return value.lower().endswith((
+            ".jpg", ".jpeg", ".png", ".gif", ".webp"
+        ))
+    
+    def collect_images(d):
+        for value in d.values():
             if isinstance(value, dict):
-                copy_images(value)
-            elif isinstance(value, str) and value.strip():
-                source_path = os.path.join(source_dir, value)
-                target_path = os.path.join(target_dir, value)
-                if os.path.exists(source_path):
-                    shutil.copy2(source_path, target_path)
+                collect_images(value)
+            elif isinstance(value, str) and is_image_file(value):
+                image_files.add(value)
 
-    copy_images(soldout)
+    collect_images(soldout)
+
+    for image in image_files:
+        source_path = os.path.join(source_dir, image)
+        target_path = os.path.join(target_dir, image)
+
+        if os.path.isfile(source_path):
+            os.makedirs(os.path.dirname(target_path), exist_ok=True)
+            shutil.copy2(source_path, target_path)
