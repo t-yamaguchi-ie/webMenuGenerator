@@ -149,6 +149,111 @@ def _read_itemcells(path: str) -> Dict:
     return cells
 
 
+def _read_lname(path: str) -> List[Dict]:
+    result = []
+
+    if not os.path.isfile(path):
+        return result
+
+    with open(path, "r", encoding="cp932", errors="strict") as f:
+        sample = f.read(1024)
+        f.seek(0)
+        dialect = csv.Sniffer().sniff(sample, delimiters=",\t")
+        reader = csv.reader(f, dialect)
+
+        for row in reader:
+            if not row or len(row) < 2:
+                continue
+
+            try:
+                index = int(row[0])
+            except ValueError:
+                continue
+
+            name = row[1].strip()
+            if not name:
+                continue
+
+            result.append({
+                "index": index,
+                "name": name
+            })
+            
+    result.sort(key=lambda x: x["index"])
+
+    return result
+
+
+def _read_mname(path: str) -> List[Dict]:
+    result = []
+
+    if not os.path.isfile(path):
+        return result
+
+    with open(path, "r", encoding="cp932", errors="strict") as f:
+        sample = f.read(1024)
+        f.seek(0)
+        dialect = csv.Sniffer().sniff(sample, delimiters=",\t")
+        reader = csv.reader(f, dialect)
+
+        for row in reader:
+            if not row or len(row) < 3:
+                continue
+
+            try:
+                lindex = int(row[0])
+                mindex = int(row[1])
+            except ValueError:
+                continue
+
+            name = row[2].strip()
+            if not name:
+                continue
+
+            result.append({
+                "lindex": lindex,
+                "mindex": mindex,
+                "name": name
+            })
+
+    result.sort(key=lambda x: (x["lindex"], x["mindex"]))
+
+    return result
+
+
+def _read_iteminfo_mdel(path: str) -> List[Dict]:
+    items = []
+
+    if not os.path.isfile(path):
+        return items
+
+    with open(path, "r", encoding="cp932", errors="strict") as f:
+        sample = f.read(1024)
+        f.seek(0)
+        dialect = csv.Sniffer().sniff(sample, delimiters=",\t")
+        reader = csv.reader(f, dialect)
+
+        for row in reader:
+            if not row:
+                continue
+
+            if row[0].startswith("#") or row[0] == "ItemCode":
+                continue
+
+            if len(row) < 5:
+                continue
+
+            items.append({
+                "item_code": int(row[0]), 
+                "name": row[1].strip(),
+                "price": int(row[2]),
+                "tax_price": int(row[3]),
+                "master_price": int(row[4]),
+            })
+
+    return items
+
+
 def read_osusume(root: str) -> Dict:
     base = os.path.join(root, "smenu")
     entries = []
@@ -236,3 +341,45 @@ def read_osusume(root: str) -> Dict:
                 entries.append(entry)
 
     return {"root": root, "entries": entries}
+
+
+def read_osusume_datas(root: str):
+    base = os.path.join(root, "smenu", "menu", "datas")
+
+    readers = {
+        "lname": (_read_lname, {"_lname.csv", "lname.csv"}),
+        "mname": (_read_mname, {"_mname.csv", "mname.csv"}),
+        "iteminfo_mdel": (_read_iteminfo_mdel, {"iteminfo_mdel.csv"}),
+    }
+
+    result = {key: {} for key in readers}
+
+    if not os.path.isdir(base):
+        return result
+
+    for name in os.listdir(base):
+        path = os.path.join(base, name)
+
+        if os.path.isfile(path):
+            lower = name.lower()
+            for key, (reader, filenames) in readers.items():
+                if lower in filenames:
+                    result[key]["default"] = reader(path)
+            continue
+
+        if os.path.isdir(path):
+            lang = name
+
+            for fname in os.listdir(path):
+                fpath = os.path.join(path, fname)
+                if not os.path.isfile(fpath):
+                    continue
+
+                lower = fname.lower()
+                for key, (reader, filenames) in readers.items():
+                    if lower in filenames:
+                        result[key][lang] = reader(fpath)
+
+    return result
+
+
