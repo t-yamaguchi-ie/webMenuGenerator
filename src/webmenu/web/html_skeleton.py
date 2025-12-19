@@ -407,7 +407,7 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType, s
     // 表示位置を決定
     const placeInfo = items[renderIndex];
     
-    if (!isKitchenMenuMode && !isMinusOrder) {
+    if (!isKitchenMenuMode) {
       // 品切れ整列機能
       const soldOutState = getSoldOutState(gi, soldout_settings);
       // gi.osusume が存在しない、またはおすすめフレーム非表示、または品切れの場合は非表示対象
