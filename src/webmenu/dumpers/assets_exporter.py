@@ -32,12 +32,21 @@ def export_assets(free_dir:str, osusume_dir:str, out_assets_dir:str, required_as
 
     os.makedirs(out_assets_dir, exist_ok=True)
     src = os.path.join(free_dir, "images")
-    if os.path.isdir(src):
-        dst = os.path.join(out_assets_dir, "free_images")
-        if os.path.isdir(dst):
-            shutil.copytree(src, dst)
-    # TODO: osusume 側の画像コピーも追加
+    dst = os.path.join(out_assets_dir, "free_images")
+    if not os.path.isdir(src):
+        return
+    
+    for root, dirs, files in os.walk(src):
+        rel_dir = os.path.relpath(root, src)
+        dst_dir = dst if rel_dir == "." else os.path.join(dst, rel_dir)
 
+        os.makedirs(dst_dir, exist_ok=True)
+
+        for file in files:
+            src_file = os.path.join(root, file)
+            dst_file = os.path.join(dst_dir, file)
+            shutil.copy2(src_file, dst_file)
+            
 
 def export_soldout_assets(free_dir:str,out_assets_dir:str, soldout):
     if not soldout:
