@@ -23,12 +23,13 @@ from .mapping.to_web_products import make_products
 from .mapping.to_web_categories import make_categories
 from .mapping.to_web_small_pages import make_small_pages
 from .mapping.to_web_soldout import make_soldout_json
-from .mapping.to_web_jump_btns import make_jump_btns_json
+from .mapping.to_web_jump_btns import make_jump_btns_json,make_checkin_btns_json
 from .web.html_skeleton import write_index_html
 from .web.validate import validate_all
 from .dumpers.assets_exporter import export_assets
 from .dumpers.assets_exporter import export_soldout_assets
 from .dumpers.assets_exporter import export_jump_btn_assets
+from .dumpers.assets_exporter import export_checkin_btn_assets
 from typing import Set
 
 ASSET_PREFIX_FREE = "free_images/"
@@ -240,6 +241,7 @@ def run_pipeline(args):
         categories = make_categories(args.free, args.osusume, menudb, ini_bundle, small_pages, schema_version=args.schema_version)
         soldout = make_soldout_json(ini_bundle)
         jump_btn = make_jump_btns_json(args.free, args.osusume, ini_bundle)
+        checkin_btn = make_checkin_btns_json(args.free, args.osusume, ini_bundle)
         
         # Emit web_content
         logger.info("Web 向け JSON ファイルの出力を開始します。")
@@ -251,6 +253,8 @@ def run_pipeline(args):
             json.dump(soldout, f, ensure_ascii=False, indent=2)
         with open(os.path.join(web_dir, "jumpmenu.json"), "w", encoding="utf-8") as f:
             json.dump(jump_btn, f, ensure_ascii=False, indent=2)
+        with open(os.path.join(web_dir, "checkin_hansoku.json"), "w", encoding="utf-8") as f:
+            json.dump(checkin_btn, f, ensure_ascii=False, indent=2)
         for rel_path, payload in small_pages.items():
             p = os.path.join(web_dir, rel_path)
             os.makedirs(os.path.dirname(p), exist_ok=True)
@@ -296,6 +300,13 @@ def run_pipeline(args):
                 assets_dir,
                 jump_btn
             )
+            export_checkin_btn_assets(
+                args.free,
+                args.osusume,
+                assets_dir,
+                checkin_btn
+            )
+            
 
         logger.info("index.html の生成処理を開始します。")
         write_index_html(web_dir, show_dev_ui=args.show_dev_ui)

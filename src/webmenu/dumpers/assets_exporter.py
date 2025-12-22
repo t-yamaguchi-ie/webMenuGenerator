@@ -113,3 +113,49 @@ def export_jump_btn_assets(free_dir:str,osusume_dir:str,out_assets_dir:str, jump
         dst_path = os.path.join(out_assets_dir, image)
         os.makedirs(os.path.dirname(dst_path), exist_ok=True)
         shutil.copy2(src_path, dst_path)
+
+
+def export_checkin_btn_assets(
+    free_dir: str,
+    osusume_dir: str,
+    out_assets_dir: str,
+    checkin_btn
+):
+    checkin = checkin_btn.get("checkin_hansoku", {})
+    screens = checkin.get("screens", {})
+
+    if not screens:
+        return
+
+    image_files = set()
+
+    def collect_image_map(image_map):
+        if not isinstance(image_map, dict):
+            return
+        for path in image_map.values():
+            if path:
+                image_files.add(path)
+
+    for screen in screens.values():
+        collect_image_map(screen.get("background"))
+        for btn in screen.get("buttons", []):
+            collect_image_map(btn.get("image"))
+
+    for image in image_files:
+        if image.startswith(FREE_PREFIX):
+            rel = image[len(FREE_PREFIX):]
+            src_path = os.path.join(free_dir, "images", rel)
+
+        elif image.startswith(OSUSUME_PREFIX):
+            rel = image[len(OSUSUME_PREFIX):]
+            src_path = os.path.join(osusume_dir, "smenu", rel)
+
+        else:
+            src_path = os.path.join(free_dir, "images", image)
+
+        if not os.path.isfile(src_path):
+            continue
+
+        dst_path = os.path.join(out_assets_dir, image)
+        os.makedirs(os.path.dirname(dst_path), exist_ok=True)
+        shutil.copy2(src_path, dst_path)
