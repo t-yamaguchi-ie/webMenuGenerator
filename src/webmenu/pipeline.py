@@ -11,6 +11,7 @@ import json
 import datetime
 import logging
 import configparser
+import shutil
 
 # 自作モジュール
 from .parsers.ini_loader import load_all_ini
@@ -22,10 +23,12 @@ from .mapping.to_web_products import make_products
 from .mapping.to_web_categories import make_categories
 from .mapping.to_web_small_pages import make_small_pages
 from .mapping.to_web_soldout import make_soldout_json
+from .mapping.to_web_jump_btns import make_jump_btns_json
 from .web.html_skeleton import write_index_html
 from .web.validate import validate_all
 from .dumpers.assets_exporter import export_assets
 from .dumpers.assets_exporter import export_soldout_assets
+from .dumpers.assets_exporter import export_jump_btn_assets
 from typing import Set
 
 ASSET_PREFIX_FREE = "free_images/"
@@ -236,6 +239,7 @@ def run_pipeline(args):
         )
         categories = make_categories(args.free, args.osusume, menudb, ini_bundle, small_pages, schema_version=args.schema_version)
         soldout = make_soldout_json(ini_bundle)
+        jump_btn = make_jump_btns_json(args.free, args.osusume, ini_bundle)
         
         # Emit web_content
         logger.info("Web 向け JSON ファイルの出力を開始します。")
@@ -245,6 +249,8 @@ def run_pipeline(args):
             json.dump(categories, f, ensure_ascii=False, indent=2)
         with open(os.path.join(web_dir, "soldout.json"), "w", encoding="utf-8") as f:
             json.dump(soldout, f, ensure_ascii=False, indent=2)
+        with open(os.path.join(web_dir, "jumpmenu.json"), "w", encoding="utf-8") as f:
+            json.dump(jump_btn, f, ensure_ascii=False, indent=2)
         for rel_path, payload in small_pages.items():
             p = os.path.join(web_dir, rel_path)
             os.makedirs(os.path.dirname(p), exist_ok=True)
@@ -259,24 +265,36 @@ def run_pipeline(args):
         logger.info("画像素材ファイルの出力処理を開始します。")
         required_assets = collect_required_assets(small_pages)
         catrgories_assets = collect_category_assets(categories)
+        
+        assets_dir = os.path.join(web_dir, "assets")
 
         if not args.skip_assets:
+            if os.path.isdir(assets_dir):
+                shutil.rmtree(assets_dir)
+            os.makedirs(assets_dir, exist_ok=True)
+                
             export_assets(
                 args.free,
                 args.osusume,
-                os.path.join(web_dir, "assets"),
+                assets_dir,
                 required_assets=required_assets
             )
             export_assets(
                 args.free,
                 args.osusume,
-                os.path.join(web_dir, "assets"),
+                assets_dir,
                 required_assets=catrgories_assets
             )
             export_soldout_assets(
                 args.free,
-                os.path.join(web_dir, "assets"),
+                assets_dir,
                 soldout
+            )
+            export_jump_btn_assets(
+                args.free,
+                args.osusume,
+                assets_dir,
+                jump_btn
             )
 
         logger.info("index.html の生成処理を開始します。")

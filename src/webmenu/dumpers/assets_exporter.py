@@ -8,8 +8,6 @@ SOLDOUT_PREFIX = "soldout_images/"
 def export_assets(free_dir:str, osusume_dir:str, out_assets_dir:str, required_assets=None):
     if required_assets:
         assets = sorted({asset for asset in required_assets if asset})
-        if os.path.isdir(out_assets_dir):
-            shutil.rmtree(out_assets_dir)
         os.makedirs(out_assets_dir, exist_ok=True)
 
         for rel in assets:
@@ -37,8 +35,7 @@ def export_assets(free_dir:str, osusume_dir:str, out_assets_dir:str, required_as
     if os.path.isdir(src):
         dst = os.path.join(out_assets_dir, "free_images")
         if os.path.isdir(dst):
-            shutil.rmtree(dst)
-        shutil.copytree(src, dst)
+            shutil.copytree(src, dst)
     # TODO: osusume 側の画像コピーも追加
 
 
@@ -73,3 +70,37 @@ def export_soldout_assets(free_dir:str,out_assets_dir:str, soldout):
         if os.path.isfile(source_path):
             os.makedirs(os.path.dirname(target_path), exist_ok=True)
             shutil.copy2(source_path, target_path)
+
+
+def export_jump_btn_assets(free_dir:str,osusume_dir:str,out_assets_dir:str, jump_btns):
+    buttons = jump_btns.get("jumpmenu", {}).get("buttons", [])
+    if not buttons:
+        return
+    
+    image_files = set()
+    
+    for btn in buttons:
+        image_map = btn.get("image", {})
+        if not isinstance(image_map, dict):
+            continue
+
+        for path in image_map.values():
+            if path:
+                image_files.add(path)
+                
+    for image in image_files:
+        if image.startswith(FREE_PREFIX):
+            rel = image[len(FREE_PREFIX):]
+            src_path = os.path.join(free_dir, "images", rel)
+        elif image.startswith(OSUSUME_PREFIX):
+            rel = image[len(OSUSUME_PREFIX):]
+            src_path = os.path.join(osusume_dir, "smenu", rel)
+        else:
+            src_path = os.path.join(free_dir, "images", image)
+
+        if not os.path.isfile(src_path):
+            continue
+
+        dst_path = os.path.join(out_assets_dir, image)
+        os.makedirs(os.path.dirname(dst_path), exist_ok=True)
+        shutil.copy2(src_path, dst_path)
