@@ -1,4 +1,4 @@
-from .to_web_categories import _get_image_path
+from .to_web_categories import _get_image_path,_check_is_multi_lang
 
 def make_jump_btns_json(free_dir:str, osusume_dir:str,ini_bundle):
     jumpmenu = (
@@ -26,7 +26,9 @@ def make_jump_btns_json(free_dir:str, osusume_dir:str,ini_bundle):
             if idx not in buttons:
                 buttons[idx] = {"id": idx}
             
-            jump_btn = _get_image_path(free_dir, osusume_dir, value, has_osusume=True, multi_lang_dirs=[])
+            # 多言語対応画像ディレクトリ一覧を取得
+            multi_lang_dirs = _check_is_multi_lang(free_dir)
+            jump_btn = _get_image_path(free_dir, osusume_dir, value, has_osusume=True, multi_lang_dirs=multi_lang_dirs)
             buttons[idx]["image"] = jump_btn
 
     return {
