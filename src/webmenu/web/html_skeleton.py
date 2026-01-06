@@ -318,7 +318,7 @@ async function ensureProducts() {
   if (cache.products) {
     return cache.products;
   }
-  const menudb = await fetchJson('./menudb.json');
+  const menudb = await fetchJson('./processed_dump/menudb.json');
   cache.products = new Map((menudb.products || []).map(p => [p.product_code, p]));
   return cache.products;
 }
@@ -327,7 +327,7 @@ async function ensureCategories() {
   if (cache.categories) {
     return cache.categories;
   }
-  const cats = await fetchJson('./categories.json');
+  const cats = await fetchJson('./processed_dump/categories.json');
   cache.categories = cats;
   return cats;
 }
@@ -349,7 +349,7 @@ async function ensureSoldoutSettings() {
   if (cache.soldout_settings) {
     return cache.soldout_settings;
   }
-  const soldout_settings = await fetchJson('./soldout.json');
+  const soldout_settings = await fetchJson('./processed_dump/soldout.json');
   cache.soldout_settings = soldout_settings;
   return soldout_settings;
 }
