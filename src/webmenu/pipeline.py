@@ -203,6 +203,28 @@ def collect_category_assets(categories: dict) -> Set[str]:
     return assets
 
 
+def generate_dir_to_json(processed_dump_dir: str, raw_dump_dir: str, web_dir: str):
+    dir_mapping = [
+        ("processed_dump", processed_dump_dir),
+        ("raw_dump/osusume", os.path.join(raw_dump_dir, "osusume")),
+        ("raw_dump/ini", os.path.join(raw_dump_dir, "ini")),
+        ("raw_dump/menudb", os.path.join(raw_dump_dir, "menudb"))
+    ]
+
+    dir_info = {key: [] for key, _ in dir_mapping}
+
+    for json_key, target_dir in dir_mapping:
+        if not os.path.exists(target_dir):
+            continue
+
+        for entry in os.listdir(target_dir):
+            entry_full_path = os.path.join(target_dir, entry)
+            if os.path.isfile(entry_full_path):
+                dir_info[json_key].append(entry)
+
+    return dir_info
+
+
 # ------------------------------------------------------------
 # パイプライン実行
 # メニュー関連データを読み込んで加工し、Web向けに出力する一連の処理
@@ -279,6 +301,13 @@ def run_pipeline(args):
             os.makedirs(os.path.dirname(p), exist_ok=True)
             with open(p, "w", encoding="utf-8") as f:
                 json.dump(cells_payload, f, ensure_ascii=False, indent=2)
+
+        # フォルダ構成情報のJSON出力
+        logger.info("フォルダ構成情報のJSON出力処理を開始します。")
+        dir_info = generate_dir_to_json(
+            processed_dump_dir, raw_dump_dir, web_dir)
+        with open(os.path.join(web_dir, "dir_info.json"), "w", encoding="utf-8") as f:
+            json.dump(dir_info, f, ensure_ascii=False, indent=2)
 
         logger.info("画像素材ファイルの出力処理を開始します。")
         required_assets = collect_required_assets(small_pages)
