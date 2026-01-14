@@ -571,17 +571,10 @@ function renderTiles(gridEl, items, productMap, layout, cellsData, layoutType, s
         soldoutLayer.style.display = "none";
       }
     
-      // 整列せずに非表示にしたい場合は、画像を使って全面を覆う形で隠します
       if (layoutType === 'recommended' || gi.osusume) {
         tile.classList.add('tile--recommended');
-        const soldOutState = getSoldOutState(gi, soldout_settings);
-        if (soldOutState === "1"){
-          soldoutImg.style.width = "100%";
-          soldoutImg.style.height = "100%";
-        } else {
-          soldoutImg.style.width = "auto";
-          soldoutImg.style.height = "auto";
-        }
+        soldoutImg.style.width = "auto";
+        soldoutImg.style.height = "auto";
       }
     
       inner.appendChild(soldoutLayer);
