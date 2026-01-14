@@ -64,12 +64,12 @@ def setup_logger(name: str = "webmenu_generator", level: int = logging.INFO) -> 
             if config.has_section("LOG"):
                 base = config.get("LOG", "MIS_LOG_FOLDER", fallback=None)
                 if base:
-                    log_dir = os.path.join(base, "WebMenu", "logs")
+                    log_dir = os.path.join(base, "WebMenu", "WebMenuGenerator")
         except Exception:
             log_dir = None
 
     if log_dir is None and os.path.isdir("D:\\"):
-        log_dir = r"D:\WebMenu\logs"
+        log_dir = r"D:\WebMenu\WebMenuGenerator"
 
     # --------------------------------------------
     # ログファイルパス作成
