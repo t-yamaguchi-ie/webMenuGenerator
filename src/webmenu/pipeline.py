@@ -18,6 +18,7 @@ from .parsers.ini_loader import load_all_ini
 from .parsers.menudb_reader import read_menudb
 from .parsers.osusume_reader import read_osusume
 from .parsers.osusume_reader import read_osusume_datas
+from .parsers.datas_loader import read_datas
 from .dumpers.raw_dump_writer import write_raw_dump
 from .mapping.to_web_products import make_products
 from .mapping.to_web_categories import make_categories
@@ -255,6 +256,7 @@ def run_pipeline(args):
         osusume_ini_bundle = load_all_ini(
             os.path.join(args.osusume, "smenu", "menu", "datas"))
         osusume_datas = read_osusume_datas(args.osusume)
+        item_info_lang = read_datas(os.path.join(args.free, "datas"))
 
         # Raw dump
         logger.info("Raw dump の出力処理を開始します。")

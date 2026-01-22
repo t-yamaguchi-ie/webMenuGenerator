@@ -227,7 +227,7 @@ def _read_iteminfo_mdel(path: str) -> List[Dict]:
     if not os.path.isfile(path):
         return items
 
-    with open(path, "r", encoding="cp932", errors="strict") as f:
+    with open(path, "r", encoding="utf-8", errors="strict") as f:
         sample = f.read(1024)
         f.seek(0)
         dialect = csv.Sniffer().sniff(sample, delimiters=",\t")
