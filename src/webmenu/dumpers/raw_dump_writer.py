@@ -2,7 +2,7 @@ import os
 import json
 
 
-def write_raw_dump(raw_dump_dir: str, ini_bundle, menudb, osusume, osusume_ini_bundle, osusume_datas, item_info_lang):
+def write_raw_dump(raw_dump_dir: str, ini_bundle, menudb, osusume, osusume_ini_bundle, osusume_datas, datas):
     os.makedirs(raw_dump_dir, exist_ok=True)
 
     # ini
@@ -33,17 +33,23 @@ def write_raw_dump(raw_dump_dir: str, ini_bundle, menudb, osusume, osusume_ini_b
                   f, ensure_ascii=False, indent=2)
 
     # osusume
-    osusume_dir = os.path.join(raw_dump_dir, "osusume")
-    os.makedirs(osusume_dir, exist_ok=True)
-    with open(os.path.join(osusume_dir, "osusume.json"), "w", encoding="utf-8") as f:
-        json.dump(osusume, f, ensure_ascii=False, indent=2)
-    for fname, payload in osusume_ini_bundle.items():
-        with open(os.path.join(osusume_dir, fname + ".json"), "w", encoding="utf-8") as f:
-            json.dump({"__file": fname, **payload},
-                      f, ensure_ascii=False, indent=2)
-    for data_name, data_payload in osusume_datas.items():
-        with open(os.path.join(osusume_dir, data_name + ".json"), "w", encoding="utf-8") as f:
-            json.dump(data_payload, f, ensure_ascii=False, indent=2)
-    for data_name, data_payload in item_info_lang.items():
-        with open(os.path.join(osusume_dir, data_name + ".json"), "w", encoding="utf-8") as f:
-            json.dump(data_payload, f, ensure_ascii=False, indent=2)
+    if osusume or osusume_ini_bundle or osusume_datas:
+        osusume_dir = os.path.join(raw_dump_dir, "osusume")
+        os.makedirs(osusume_dir, exist_ok=True)
+        with open(os.path.join(osusume_dir, "osusume.json"), "w", encoding="utf-8") as f:
+            json.dump(osusume, f, ensure_ascii=False, indent=2)
+        for fname, payload in osusume_ini_bundle.items():
+            with open(os.path.join(osusume_dir, fname + ".json"), "w", encoding="utf-8") as f:
+                json.dump({"__file": fname, **payload},
+                          f, ensure_ascii=False, indent=2)
+        for data_name, data_payload in osusume_datas.items():
+            with open(os.path.join(osusume_dir, data_name + ".json"), "w", encoding="utf-8") as f:
+                json.dump(data_payload, f, ensure_ascii=False, indent=2)
+
+    # datas
+    if datas:
+        datas_dir = os.path.join(raw_dump_dir, "datas")
+        os.makedirs(datas_dir, exist_ok=True)
+        for data_name, data_payload in datas.items():
+            with open(os.path.join(datas_dir, data_name + ".json"), "w", encoding="utf-8") as f:
+                json.dump(data_payload, f, ensure_ascii=False, indent=2)

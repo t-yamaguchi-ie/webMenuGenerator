@@ -26,7 +26,8 @@ def _read_frameinf(path: str):
                 continue
             if current and "=" in line:
                 key, value = line.split("=", 1)
-                frames_by_section.setdefault(current, {})[key.strip()] = value.strip()
+                frames_by_section.setdefault(current, {})[
+                    key.strip()] = value.strip()
 
     frames_by_code = {}
     slots = []
@@ -71,20 +72,20 @@ def _read_frameinf(path: str):
 def _scan_images(entry_dir: str, l_name: str, m_name: str, v_name: str):
     frame_images: Dict[str, Dict[int, str]] = {}
     other_images: List[str] = []
-    
+
     # ディレクトリが存在しない場合は空を返す
     if not os.path.isdir(entry_dir):
         return frame_images, other_images
-    
+
     # entry_dir 以下のすべてのファイルを再帰的に走査
     # os.walk を使用することで en-US などの言語サブディレクトリも含める
-    
-    for root ,dirs, files in os.walk(entry_dir):
-        
+
+    for root, dirs, files in os.walk(entry_dir):
+
         # 現在の言語ディレクトリを取得
         rel_root = os.path.relpath(root, entry_dir).replace(os.sep, "/")
         lang = "default" if rel_root == "." else rel_root
-        
+
         for fname in sorted(files):
             lower = fname.lower()
             if lower in {".ds_store", "thumbs.db"}:
@@ -94,11 +95,11 @@ def _scan_images(entry_dir: str, l_name: str, m_name: str, v_name: str):
             path = os.path.join(root, fname)
             if not os.path.isfile(path):
                 continue
-            
+
             # 相対パスを取得して出力用パスを構築
             rel_path = os.path.relpath(path, entry_dir).replace(os.sep, "/")
             rel = f"osusume_images/{l_name}/{m_name}/{v_name}/{rel_path}"
-            
+
             # frame_idx の判定
             stem = os.path.splitext(fname.strip())[0]
             match = FRAME_INDEX_RE.search(stem)
@@ -108,8 +109,8 @@ def _scan_images(entry_dir: str, l_name: str, m_name: str, v_name: str):
                     frame_idx = int(match.group(1))
                 except ValueError:
                     frame_idx = None
-                    
-            # 言語ごとに frame_images を格納        
+
+            # 言語ごとに frame_images を格納
             if frame_idx is not None:
                 if lang not in frame_images:
                     frame_images[lang] = {}
@@ -178,7 +179,7 @@ def _read_lname(path: str) -> List[Dict]:
                 "index": index,
                 "name": name
             })
-            
+
     result.sort(key=lambda x: x["index"])
 
     return result
@@ -227,7 +228,7 @@ def _read_iteminfo_mdel(path: str) -> List[Dict]:
     if not os.path.isfile(path):
         return items
 
-    with open(path, "r", encoding="utf-8", errors="strict") as f:
+    with open(path, "r", encoding="cp932", errors="strict") as f:
         sample = f.read(1024)
         f.seek(0)
         dialect = csv.Sniffer().sniff(sample, delimiters=",\t")
@@ -244,7 +245,7 @@ def _read_iteminfo_mdel(path: str) -> List[Dict]:
                 continue
 
             items.append({
-                "item_code": int(row[0]), 
+                "item_code": int(row[0]),
                 "name": row[1].strip(),
                 "price": int(row[2]),
                 "tax_price": int(row[3]),
@@ -290,7 +291,8 @@ def read_osusume(root: str) -> Dict:
                 cells_path = os.path.join(entry_dir, "itemcell.csv")
                 frames, layout_meta, slots = _read_frameinf(frame_path)
                 cells = _read_itemcells(cells_path)
-                frame_images, other_images = _scan_images(entry_dir, l_name, m_name, v_name)
+                frame_images, other_images = _scan_images(
+                    entry_dir, l_name, m_name, v_name)
 
                 layout_id = layout_meta.get("layout") if layout_meta else None
                 try:
@@ -298,14 +300,14 @@ def read_osusume(root: str) -> Dict:
                 except (TypeError, ValueError):
                     layout_id = None
                 layout_show = layout_meta.get("show")
-                
+
                 # デフォルトのフレーム画像（default 言語）を格納する辞書
                 entry_frame_images = {}
-                
+
                 # すべての言語のフレーム画像を格納する辞書
                 multi_lang_images = {}
-                
-                if layout_id in FIXED_LAYOUT_IDS :
+
+                if layout_id in FIXED_LAYOUT_IDS:
                     entry_frame_images = frame_images.get("default", {})
                     multi_lang_images = frame_images.copy()
                 else:
@@ -352,7 +354,7 @@ def read_osusume_datas(root: str):
         "iteminfo_mdel": (_read_iteminfo_mdel, {"iteminfo_mdel.csv"}),
     }
 
-    result = {key: {} for key in readers}
+    result = {}
 
     if not os.path.isdir(base):
         return result
@@ -364,12 +366,19 @@ def read_osusume_datas(root: str):
             lower = name.lower()
             for key, (reader, filenames) in readers.items():
                 if lower in filenames:
-                    result[key]["default"] = reader(path)
+                    read_result = reader(path)
+                    # 有効なデータがある場合のみ結果に追加
+                    if read_result:
+                        if key not in result:
+                            result[key] = {}
+                        result[key]["default"] = read_result
             continue
 
+        # ディレクトリの場合：言語別ファイルを読み取り
         if os.path.isdir(path):
             lang = name
 
+            # 言語ディレクトリ内のファイルを走査
             for fname in os.listdir(path):
                 fpath = os.path.join(path, fname)
                 if not os.path.isfile(fpath):
@@ -378,8 +387,11 @@ def read_osusume_datas(root: str):
                 lower = fname.lower()
                 for key, (reader, filenames) in readers.items():
                     if lower in filenames:
-                        result[key][lang] = reader(fpath)
+                        read_result = reader(fpath)
+                        # 有効なデータがある場合のみ結果に追加
+                        if read_result:
+                            if key not in result:
+                                result[key] = {}
+                            result[key][lang] = read_result
 
     return result
-
-

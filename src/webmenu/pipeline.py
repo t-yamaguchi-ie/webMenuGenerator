@@ -256,12 +256,12 @@ def run_pipeline(args):
         osusume_ini_bundle = load_all_ini(
             os.path.join(args.osusume, "smenu", "menu", "datas"))
         osusume_datas = read_osusume_datas(args.osusume)
-        item_info_lang = read_datas(os.path.join(args.free, "datas"))
+        datas = read_datas(os.path.join(args.free, "datas"))
 
         # Raw dump
         logger.info("Raw dump の出力処理を開始します。")
         write_raw_dump(raw_dump_dir, ini_bundle, menudb, osusume,
-                       osusume_ini_bundle, osusume_datas, item_info_lang)
+                       osusume_ini_bundle, osusume_datas, datas)
 
         # Mapping to web_content
         logger.info("Web 向け JSON データの生成処理を開始します。")

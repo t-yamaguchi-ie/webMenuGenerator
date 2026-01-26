@@ -9,7 +9,7 @@ def read_datas(datas: str):
         "iteminfoLang": (_read_item_info_language, {"iteminfolang.csv"}),
     }
 
-    result = {key: {} for key in readers}
+    result = {}
 
     if not os.path.isdir(datas):
         return result
@@ -21,12 +21,19 @@ def read_datas(datas: str):
             lower = name.lower()
             for key, (reader, filenames) in readers.items():
                 if lower in filenames:
-                    result[key]["default"] = reader(path)
+                    read_result = reader(path)
+                    # 有効なデータがある場合のみ結果に追加
+                    if read_result:
+                        if key not in result:
+                            result[key] = {}
+                        result[key]["default"] = read_result
             continue
 
+        # ディレクトリの場合：言語別ファイルを読み取り
         if os.path.isdir(path):
             lang = name
 
+            # 言語ディレクトリ内のファイルを走査
             for fname in os.listdir(path):
                 fpath = os.path.join(path, fname)
                 if not os.path.isfile(fpath):
@@ -35,7 +42,12 @@ def read_datas(datas: str):
                 lower = fname.lower()
                 for key, (reader, filenames) in readers.items():
                     if lower in filenames:
-                        result[key][lang] = reader(fpath)
+                        read_result = reader(fpath)
+                        # 有効なデータがある場合のみ結果に追加
+                        if read_result:
+                            if key not in result:
+                                result[key] = {}
+                            result[key][lang] = read_result
 
     return result
 
