@@ -26,7 +26,9 @@ dist/
 
 # Project outputs
 outroot/
-dataSrc/
+dataSrc/free/
+dataSrc/osusume/
+menu_data/
 
 # Local data dumps
 *.log
