@@ -26,7 +26,7 @@ dist/
 
 # Project outputs
 outroot/
-datSrc/
+dataSrc/
 
 # Local data dumps
 *.log
