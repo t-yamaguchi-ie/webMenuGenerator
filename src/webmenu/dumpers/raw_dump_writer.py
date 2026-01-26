@@ -2,7 +2,7 @@ import os
 import json
 
 
-def write_raw_dump(raw_dump_dir: str, ini_bundle, menudb, osusume, osusume_ini_bundle, osusume_datas):
+def write_raw_dump(raw_dump_dir: str, ini_bundle, menudb, osusume, osusume_ini_bundle, osusume_datas, item_info_lang):
     os.makedirs(raw_dump_dir, exist_ok=True)
 
     # ini
@@ -42,5 +42,8 @@ def write_raw_dump(raw_dump_dir: str, ini_bundle, menudb, osusume, osusume_ini_b
             json.dump({"__file": fname, **payload},
                       f, ensure_ascii=False, indent=2)
     for data_name, data_payload in osusume_datas.items():
+        with open(os.path.join(osusume_dir, data_name + ".json"), "w", encoding="utf-8") as f:
+            json.dump(data_payload, f, ensure_ascii=False, indent=2)
+    for data_name, data_payload in item_info_lang.items():
         with open(os.path.join(osusume_dir, data_name + ".json"), "w", encoding="utf-8") as f:
             json.dump(data_payload, f, ensure_ascii=False, indent=2)

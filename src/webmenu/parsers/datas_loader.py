@@ -6,7 +6,7 @@ from typing import List, Dict
 def read_datas(datas: str):
 
     readers = {
-        "iteminfo_lang": (_read_item_info_language, {"iteminfolang.csv"}),
+        "iteminfoLang": (_read_item_info_language, {"iteminfolang.csv"}),
     }
 
     result = {key: {} for key in readers}

@@ -260,8 +260,8 @@ def run_pipeline(args):
 
         # Raw dump
         logger.info("Raw dump の出力処理を開始します。")
-        write_raw_dump(raw_dump_dir, ini_bundle, menudb,
-                       osusume, osusume_ini_bundle, osusume_datas)
+        write_raw_dump(raw_dump_dir, ini_bundle, menudb, osusume,
+                       osusume_ini_bundle, osusume_datas, item_info_lang)
 
         # Mapping to web_content
         logger.info("Web 向け JSON データの生成処理を開始します。")
