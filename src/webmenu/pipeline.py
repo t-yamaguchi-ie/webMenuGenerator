@@ -313,7 +313,7 @@ def run_pipeline(args):
 
         logger.info("画像素材ファイルの出力処理を開始します。")
         required_assets = collect_required_assets(small_pages)
-        catrgories_assets = collect_category_assets(categories)
+        categories_assets = collect_category_assets(categories)
 
         assets_dir = os.path.join(web_dir, "assets")
 
@@ -332,7 +332,7 @@ def run_pipeline(args):
                 args.free,
                 args.osusume,
                 assets_dir,
-                required_assets=catrgories_assets
+                required_assets=categories_assets
             )
             export_soldout_assets(
                 args.free,
