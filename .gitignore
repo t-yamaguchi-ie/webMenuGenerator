@@ -26,9 +26,11 @@ dist/
 
 # Project outputs
 outroot/
-dataSrc/free/
-dataSrc/osusume/
 menu_data/
+dataSrc/free/*
+!dataSrc/free/.gitkeep
+dataSrc/osusume/*
+!dataSrc/osusume/.gitkeep
 
 # Local data dumps
 *.log
