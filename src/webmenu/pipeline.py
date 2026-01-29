@@ -25,6 +25,7 @@ from .mapping.to_web_categories import make_categories
 from .mapping.to_web_small_pages import make_small_pages
 from .mapping.to_web_soldout import make_soldout_json
 from .mapping.to_web_jump_btns import make_jump_btns_json, make_checkin_btns_json
+from .mapping.guidance_generator import run_guidance_process
 from .web.html_skeleton import write_index_html
 from .web.validate import validate_all
 from .dumpers.assets_exporter import export_assets
@@ -356,6 +357,14 @@ def run_pipeline(args):
         write_index_html(web_dir, show_dev_ui=args.show_dev_ui)
         validate_all(web_dir, processed_dump_dir)
 
+        # --- フォルダ内部のガイダンス処理を実施 ---
+        logger.info("案内図（guidance）の自動生成を開始します。")
+        try:
+            # 既存変数 web_dir をそのまま渡す
+            run_guidance_process(web_dir)
+            logger.info("案内図の生成に成功しました。")
+        except Exception as e:
+            logger.warning(f"案内図の生成中にエラーが発生しましたが、処理を続行します: {e}")        
         logger.info(f"WebMenuGenerate 処理が正常に完了いたしました。出力先: {out_root}")
 
     except Exception as e:
