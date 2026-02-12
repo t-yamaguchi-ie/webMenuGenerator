@@ -99,7 +99,7 @@ _CSS_CANVAS = dedent(
       height: 533px;
       border: 1px solid #d0d0d0;
       overflow: hidden;
-      background: #f2f2f2 center/cover no-repeat;
+      background: #000000 center/cover no-repeat;
       box-shadow: 0 4px 12px rgba(0,0,0,0.12);
     }
     """
