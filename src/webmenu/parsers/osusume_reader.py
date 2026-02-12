@@ -77,46 +77,63 @@ def _scan_images(entry_dir: str, l_name: str, m_name: str, v_name: str):
     if not os.path.isdir(entry_dir):
         return frame_images, other_images
 
-    # entry_dir 以下のすべてのファイルを再帰的に走査
-    # os.walk を使用することで en-US などの言語サブディレクトリも含める
+    all_image_files = []
 
     for root, dirs, files in os.walk(entry_dir):
-
-        # 現在の言語ディレクトリを取得
-        rel_root = os.path.relpath(root, entry_dir).replace(os.sep, "/")
-        lang = "default" if rel_root == "." else rel_root
-
-        for fname in sorted(files):
+        for fname in files:
             lower = fname.lower()
             if lower in {".ds_store", "thumbs.db"}:
                 continue
             if not lower.endswith(IMAGE_EXTS):
                 continue
+
             path = os.path.join(root, fname)
-            if not os.path.isfile(path):
-                continue
+            if os.path.isfile(path):
+                all_image_files.append((root, fname, path))
 
-            # 相対パスを取得して出力用パスを構築
-            rel_path = os.path.relpath(path, entry_dir).replace(os.sep, "/")
-            rel = f"osusume_images/{l_name}/{m_name}/{v_name}/{rel_path}"
+    has_fixed = any(
+        len(os.path.splitext(fname)[0]) == 8 and os.path.splitext(
+            fname)[0].isdigit()
+        for _, fname, _ in all_image_files
+    )
 
-            # frame_idx の判定
-            stem = os.path.splitext(fname.strip())[0]
+    has_free = any(
+        len(os.path.splitext(fname)[0]) == 6 and os.path.splitext(
+            fname)[0].isdigit()
+        for _, fname, _ in all_image_files
+    )
+
+    if has_fixed:
+        layout_type = "fixedlayout"
+    elif has_free:
+        layout_type = "freelayout"
+    else:
+        layout_type = None
+
+    # entry_dir 以下のすべてのファイルを再帰的に走査
+    # os.walk を使用することで en-US などの言語サブディレクトリも含める
+
+    for root, fname, path in sorted(all_image_files):
+        rel_root = os.path.relpath(root, entry_dir).replace(os.sep, "/")
+        lang = "default" if rel_root == "." else rel_root
+
+        # 相対パスを取得して出力用パスを構築
+        rel_path = os.path.relpath(path, entry_dir).replace(os.sep, "/")
+        rel = f"osusume_images/{l_name}/{m_name}/{v_name}/{rel_path}"
+
+        stem = os.path.splitext(fname.strip())[0]
+
+        if layout_type == "fixedlayout" and len(stem) == 8 and stem.isdigit():
             match = FRAME_INDEX_RE.search(stem)
-            frame_idx = None
             if match:
                 try:
                     frame_idx = int(match.group(1))
+                    frame_images.setdefault(lang, {})[frame_idx] = rel
+                    continue
                 except ValueError:
-                    frame_idx = None
+                    pass
 
-            # 言語ごとに frame_images を格納
-            if frame_idx is not None:
-                if lang not in frame_images:
-                    frame_images[lang] = {}
-                frame_images[lang][frame_idx] = rel
-            else:
-                other_images.append(rel)
+        other_images.append(rel)
 
     return frame_images, other_images
 
