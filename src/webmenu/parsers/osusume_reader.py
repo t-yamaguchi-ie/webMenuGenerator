@@ -7,7 +7,22 @@ IMAGE_EXTS = (".jpg", ".jpeg", ".png")
 FRAME_INDEX_RE = re.compile(r"(\d{2})$")
 FIXED_LAYOUT_IDS = {1, 2, 3, 4, 6, 8, 9, 10, 12, 24}
 
+# 読み込むファイルの文字コード判定
+def detect_encoding(path: str) -> str:
+    encodings = ["utf-8-sig", "utf-8", "cp932"]
 
+    for enc in encodings:
+        try:
+            with open(path, "r", encoding=enc, errors="strict") as f:
+                # 実際に全部読んで確認
+                for _ in f:
+                    pass
+            return enc
+        except UnicodeDecodeError:
+            continue
+
+    raise UnicodeDecodeError("unknown", b"", 0, 1, "Cannot detect encoding")
+    
 def _read_frameinf(path: str):
     frames_by_section = {}
     layout_meta: Dict[str, str] = {}
@@ -173,7 +188,9 @@ def _read_lname(path: str) -> List[Dict]:
     if not os.path.isfile(path):
         return result
 
-    with open(path, "r", encoding="cp932", errors="strict") as f:
+    # 事前文字コードチェック
+    encoding = detect_encoding(path)
+    with open(path, "r", encoding=encoding, errors="strict") as f:
         sample = f.read(1024)
         f.seek(0)
         dialect = csv.Sniffer().sniff(sample, delimiters=",\t")
@@ -208,7 +225,9 @@ def _read_mname(path: str) -> List[Dict]:
     if not os.path.isfile(path):
         return result
 
-    with open(path, "r", encoding="cp932", errors="strict") as f:
+    # 事前文字コードチェック
+    encoding = detect_encoding(path)
+    with open(path, "r", encoding=encoding, errors="strict") as f:
         sample = f.read(1024)
         f.seek(0)
         dialect = csv.Sniffer().sniff(sample, delimiters=",\t")
@@ -245,7 +264,9 @@ def _read_iteminfo_mdel(path: str) -> List[Dict]:
     if not os.path.isfile(path):
         return items
 
-    with open(path, "r", encoding="cp932", errors="strict") as f:
+    # 事前文字コードチェック
+    encoding = detect_encoding(path)
+    with open(path, "r", encoding=encoding, errors="strict") as f:
         sample = f.read(1024)
         f.seek(0)
         dialect = csv.Sniffer().sniff(sample, delimiters=",\t")
