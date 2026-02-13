@@ -205,9 +205,7 @@ def _read_lname(path: str) -> List[Dict]:
             except ValueError:
                 continue
 
-            name = row[1].strip()
-            if not name:
-                continue
+            name = row[1]
 
             result.append({
                 "index": index,
@@ -243,9 +241,7 @@ def _read_mname(path: str) -> List[Dict]:
             except ValueError:
                 continue
 
-            name = row[2].strip()
-            if not name:
-                continue
+            name = row[2]
 
             result.append({
                 "lindex": lindex,
